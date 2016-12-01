@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NServiceBus.Kafka
+namespace NServiceBus.Kafka.Connection
 {
-    public class Class1
+    class ProducerFactory
     {
     }
 }
