@@ -9,9 +9,19 @@ namespace NServiceBus.Kafka.Receiving
 {
     class MessagePump : IPushMessages, IDisposable
     {
+        Func<MessageContext, Task> onMessage;
+        Func<ErrorContext, Task<ErrorHandleResult>> onError;
+
         public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
         {
-            throw new NotImplementedException();
+            this.onMessage = onMessage;
+            this.onError = onError;
+            
+            //TODO: circuit breaker?
+            //circuitBreaker = new MessagePumpConnectionFailedCircuitBreaker($"'{settings.InputQueue} MessagePump'", timeToWaitBeforeTriggeringCircuitBreaker, criticalError);
+
+                       
+            return Task.FromResult(0);
         }
 
         public void Start(PushRuntimeSettings limitations)

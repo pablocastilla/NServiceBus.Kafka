@@ -1,6 +1,7 @@
 ﻿using NServiceBus.Kafka.Receiving;
 using NServiceBus.Kafka.Sending;
 using NServiceBus.Transport;
+using NServiceBus.Transports.Kafka.Administration;
 using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
@@ -21,25 +22,23 @@ namespace NServiceBus.Kafka.Tests
            
             receivedMessages = new BlockingCollection<IncomingMessage>();
 
-            var connectionString = Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString");
+            var connectionString = "127.0.0.1:9092";// Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString");
 
            
             messageDispatcher = new MessageDispatcher();
+            
+            messagePump = new MessagePump();
+           
 
-
-            messagePump = new MessagePump( new MessageConverter(), "Unit test", channelProvider, TimeSpan.FromMinutes(2), 3, 0);
-
-            routingTopology.Reset(connectionFactory, new[] { ReceiverQueue }.Concat(AdditionalReceiverQueues), new[] { ErrorQueue });
-
-            subscriptionManager = new SubscriptionManager(connectionFactory, routingTopology, ReceiverQueue);
+            subscriptionManager = new SubscriptionManager();
 
             messagePump.Init(messageContext =>
             {
                 receivedMessages.Add(new IncomingMessage(messageContext.MessageId, messageContext.Headers, messageContext.Body));
-                return TaskEx.CompletedTask;
+                return Task.FromResult(0);
             },
                 ErrorContext => Task.FromResult(ErrorHandleResult.Handled),
-                new CriticalError(_ => TaskEx.CompletedTask),
+                new CriticalError(_ => Task.FromResult(0)),
                 new PushSettings(ReceiverQueue, ErrorQueue, true, TransportTransactionMode.ReceiveOnly)
             ).GetAwaiter().GetResult();
 
@@ -51,7 +50,7 @@ namespace NServiceBus.Kafka.Tests
         {
             messagePump?.Stop().GetAwaiter().GetResult();
 
-            channelProvider?.Dispose();
+           
         }
 
         protected bool TryWaitForMessageReceipt()
@@ -79,7 +78,7 @@ namespace NServiceBus.Kafka.Tests
         protected const string ReceiverQueue = "testreceiver";
         protected const string ErrorQueue = "error";
         protected MessageDispatcher messageDispatcher;
-        
+        protected SubscriptionManager subscriptionManager;
         protected MessagePump messagePump;
              
         BlockingCollection<IncomingMessage> receivedMessages;
