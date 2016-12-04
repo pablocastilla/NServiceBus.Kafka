@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using NServiceBus.Routing;
 using Janitor;
 using NServiceBus.Settings;
-using NServiceBus.Kafka.Receiving;
 using NServiceBus.Kafka.Sending;
 using NServiceBus.Performance.TimeToBeReceived;
+using NServiceBus.Transport.Kafka.Receiving;
 
 namespace NServiceBus.Transport.Kafka
 {
@@ -17,17 +17,18 @@ namespace NServiceBus.Transport.Kafka
     class KafkaTransportInfrastructure : TransportInfrastructure, IDisposable
     {
         readonly SettingsHolder settings;
+        readonly string connectionString;
 
         public KafkaTransportInfrastructure(SettingsHolder settings, string connectionString)
         {
             this.settings = settings;
-
+            this.connectionString = connectionString;
 
         }
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
-            return new TransportReceiveInfrastructure(() => new MessagePump(), 
+            return new TransportReceiveInfrastructure(() => new MessagePump(new Transports.Kafka.Connection.ConsumerFactory(connectionString, settings.EndpointName()), settings.EndpointName()), 
                 () => new QueueCreator(), 
                 () => Task.FromResult(StartupCheckResult.Success));
         }

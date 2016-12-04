@@ -9,18 +9,20 @@ namespace NServiceBus.Transports.Kafka.Connection
 {
     class ConsumerFactory
     {
-        Consumer consumer;
+        
         string connectionString;
+        string endpointName;
 
-        public ConsumerFactory(string connectionString)
+        public ConsumerFactory(string connectionString, string endpointName)
         {
             this.connectionString = connectionString;
+            this.endpointName = endpointName;
         }
 
-        public Consumer GetConsumer()
+        public EventConsumer GetConsumer()
         {
-            var config = new RdKafka.Config() { GroupId = "example-csharp-consumer" };
-            return new Consumer(config,connectionString);
+            var config = new RdKafka.Config() { GroupId = endpointName };
+            return new EventConsumer(config,connectionString);
         }
     }
 }

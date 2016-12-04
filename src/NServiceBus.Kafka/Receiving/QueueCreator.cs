@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NServiceBus.Kafka.Receiving
+namespace NServiceBus.Transport.Kafka.Receiving
 {
     class QueueCreator : ICreateQueues
     {
