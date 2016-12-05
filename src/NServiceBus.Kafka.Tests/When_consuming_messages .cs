@@ -25,6 +25,5 @@ namespace NServiceBus.Kafka.Tests
 
             Assert.AreEqual(message.MessageId, receivedMessage.MessageId);
         }
-
     }
 }
