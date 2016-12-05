@@ -56,13 +56,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Administration\SubscriptionManager.cs" />
+    <Compile Include="Administration\WellKnownConfigurationKeys.cs" />
     <Compile Include="Connection\ConsumerFactory.cs" />
     <Compile Include="Connection\ProducerFactory.cs" />
     <Compile Include="InternalsVisibleTo.cs" />
     <Compile Include="KafkaTransport.cs" />
     <Compile Include="KafkaTransportInfrastructure.cs" />
+    <Compile Include="MessageWrapper\MessageExtensionMethods.cs" />
+    <Compile Include="MessageWrapper\MessageWrapper.cs" />
+    <Compile Include="MessageWrapper\MessageWrapperSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Receiving\MessageConverter.cs" />
     <Compile Include="Receiving\MessagePump.cs" />
     <Compile Include="Receiving\QueueCreator.cs" />
     <Compile Include="Sending\MessageDispatcher.cs" />

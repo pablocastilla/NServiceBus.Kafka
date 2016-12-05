@@ -9,6 +9,9 @@ using NServiceBus.Settings;
 using NServiceBus.Kafka.Sending;
 using NServiceBus.Performance.TimeToBeReceived;
 using NServiceBus.Transport.Kafka.Receiving;
+using NServiceBus.Transports.Kafka.Wrapper;
+using NServiceBus.Serialization;
+using NServiceBus.Transports.Kafka.Administration;
 
 namespace NServiceBus.Transport.Kafka
 {
@@ -18,11 +21,14 @@ namespace NServiceBus.Transport.Kafka
     {
         readonly SettingsHolder settings;
         readonly string connectionString;
+        private static MessageWrapperSerializer serializer;
+        static Object o = new Object();
 
         public KafkaTransportInfrastructure(SettingsHolder settings, string connectionString)
         {
             this.settings = settings;
             this.connectionString = connectionString;
+            serializer = BuildSerializer(settings);
 
         }
 
@@ -35,7 +41,7 @@ namespace NServiceBus.Transport.Kafka
 
         public override TransportSendInfrastructure ConfigureSendInfrastructure()
         {
-            return new TransportSendInfrastructure(() => new MessageDispatcher(), () => Task.FromResult(StartupCheckResult.Success));
+            return new TransportSendInfrastructure(() => new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString)), () => Task.FromResult(StartupCheckResult.Success));
         }
 
 
@@ -72,9 +78,6 @@ namespace NServiceBus.Transport.Kafka
         }
 
       
-
-       
-
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
             throw new NotImplementedException();
@@ -85,8 +88,37 @@ namespace NServiceBus.Transport.Kafka
             throw new NotImplementedException();
         }
 
+        static MessageWrapperSerializer BuildSerializer(ReadOnlySettings settings)
+        {
+            if (serializer == null)
+            {
+                lock (o)
+                {
+                    if (serializer == null)
+                    {
+                        SerializationDefinition wrapperSerializer;
+                        if (settings!=null && settings.TryGet(WellKnownConfigurationKeys.MessageWrapperSerializationDefinition, out wrapperSerializer))
+                        {
+                            serializer = new MessageWrapperSerializer(wrapperSerializer.Configure(settings)(MessageWrapperSerializer.GetMapper()));
+                        }
+
+                        serializer = new MessageWrapperSerializer(KafkaTransport.GetMainSerializer(MessageWrapperSerializer.GetMapper(), settings));
+                    }
+                }
+            }
+
+
+            return serializer;
+        }
+
+        internal static MessageWrapperSerializer GetSerializer()
+        {
+            return serializer;
+        }
+
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
+       
 
         protected virtual void Dispose(bool disposing)
         {

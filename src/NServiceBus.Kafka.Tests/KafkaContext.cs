@@ -1,7 +1,11 @@
-﻿using NServiceBus.Kafka.Receiving;
-using NServiceBus.Kafka.Sending;
+﻿using NServiceBus.Kafka.Sending;
+using NServiceBus.Settings;
 using NServiceBus.Transport;
+using NServiceBus.Transport.Kafka;
+using NServiceBus.Transport.Kafka.Receiving;
 using NServiceBus.Transports.Kafka.Administration;
+using NServiceBus.Transports.Kafka.Wrapper;
+using NServiceBus.Unicast.Messages;
 using NUnit.Framework;
 using System;
 using System.Collections.Concurrent;
@@ -15,6 +19,7 @@ namespace NServiceBus.Kafka.Tests
     class KafkaContext
     {
         public virtual int MaximumConcurrency => 1;
+        string ENDPOINTNAME = "testreceiver";
 
         [SetUp]
         public void SetUp()
@@ -23,11 +28,16 @@ namespace NServiceBus.Kafka.Tests
             receivedMessages = new BlockingCollection<IncomingMessage>();
 
             var connectionString = "127.0.0.1:9092";// Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString");
-
+            SettingsHolder settingsHolder = new SettingsHolder();
            
-            messageDispatcher = new MessageDispatcher();
+           
+
+            var kafkaTransport = new KafkaTransport();
+            var infra = kafkaTransport.Initialize(settingsHolder, connectionString);
+
+            messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
             
-            messagePump = new MessagePump();
+            messagePump = new MessagePump(new Transports.Kafka.Connection.ConsumerFactory(connectionString, ENDPOINTNAME), ENDPOINTNAME);
            
 
             subscriptionManager = new SubscriptionManager();
@@ -83,6 +93,6 @@ namespace NServiceBus.Kafka.Tests
              
         BlockingCollection<IncomingMessage> receivedMessages;
        
-        static readonly TimeSpan incomingMessageTimeout = TimeSpan.FromSeconds(1);
+        static readonly TimeSpan incomingMessageTimeout = TimeSpan.FromSeconds(2);
     }
 }
