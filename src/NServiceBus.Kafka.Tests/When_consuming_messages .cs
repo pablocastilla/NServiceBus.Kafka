@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NServiceBus.Kafka.Tests
+namespace NServiceBus.Transport.Kafka.Tests
 {
     [TestFixture]
     class When_consuming_messages:KafkaContext
@@ -24,6 +24,8 @@ namespace NServiceBus.Kafka.Tests
             var receivedMessage = ReceiveMessage();
 
             Assert.AreEqual(message.MessageId, receivedMessage.MessageId);
+
+
         }
     }
 }

@@ -22,7 +22,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         ConsumerFactory consumerFactory;
         EventConsumer consumer;
         string endpointName;
-        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
+        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(5);
 
         static ILog Logger = LogManager.GetLogger(typeof(MessagePump));
         ConcurrentDictionary<Task, Task> runningReceiveTasks;
@@ -72,11 +72,19 @@ namespace NServiceBus.Transport.Kafka.Receiving
             consumer.Start();
         }
 
+        List<TopicPartitionOffset> assigments = new List<TopicPartitionOffset>();
+
         private void Consumer_OnPartitionsAssigned(object sender, List<TopicPartitionOffset> e)
         {
             //TODO: circuit breaker ok
 
-            consumer.Assign(e);
+            foreach (var partition in e)
+            {
+                if (!assigments.Contains(partition))
+                    assigments.Add(partition);
+            }
+
+            consumer.Assign(assigments);
         }
 
         private void Consumer_OnMessage(object sender, Message e)
