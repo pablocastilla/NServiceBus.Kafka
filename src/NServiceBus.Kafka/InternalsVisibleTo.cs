@@ -1,3 +1,3 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("NServiceBus.Kafka.Tests")]
+[assembly: InternalsVisibleTo("NServiceBus.Transport.Kafka.Tests")]

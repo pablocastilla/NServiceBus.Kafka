@@ -14,7 +14,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NServiceBus.Kafka.Tests
+namespace NServiceBus.Transport.Kafka.Tests
 {
     class KafkaContext
     {
@@ -36,11 +36,12 @@ namespace NServiceBus.Kafka.Tests
             var infra = kafkaTransport.Initialize(settingsHolder, connectionString);
 
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
-            
-            messagePump = new MessagePump(new Transports.Kafka.Connection.ConsumerFactory(connectionString, ENDPOINTNAME), ENDPOINTNAME);
+
+            var consumerFactory = new Transports.Kafka.Connection.ConsumerFactory(connectionString, ENDPOINTNAME);
+            messagePump = new MessagePump(consumerFactory, ENDPOINTNAME);
            
 
-            subscriptionManager = new SubscriptionManager();
+            subscriptionManager = new SubscriptionManager(consumerFactory);
 
             messagePump.Init(messageContext =>
             {
@@ -93,6 +94,6 @@ namespace NServiceBus.Kafka.Tests
              
         BlockingCollection<IncomingMessage> receivedMessages;
        
-        static readonly TimeSpan incomingMessageTimeout = TimeSpan.FromSeconds(2);
+        static readonly TimeSpan incomingMessageTimeout = TimeSpan.FromSeconds(20);
     }
 }
