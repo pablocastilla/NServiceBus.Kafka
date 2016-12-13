@@ -58,6 +58,7 @@
     <Compile Include="Administration\SubscriptionManager.cs" />
     <Compile Include="Administration\WellKnownConfigurationKeys.cs" />
     <Compile Include="Connection\ConsumerFactory.cs" />
+    <Compile Include="Connection\KafkaEventConsumerExtensionMethods.cs" />
     <Compile Include="Connection\ProducerFactory.cs" />
     <Compile Include="InternalsVisibleTo.cs" />
     <Compile Include="KafkaTransport.cs" />

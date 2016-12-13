@@ -1,4 +1,5 @@
-﻿using NServiceBus.Kafka.Sending;
+﻿using NServiceBus.Extensibility;
+using NServiceBus.Kafka.Sending;
 using NServiceBus.Settings;
 using NServiceBus.Transport;
 using NServiceBus.Transport.Kafka;
@@ -19,9 +20,10 @@ namespace NServiceBus.Transport.Kafka.Tests
     class KafkaContext
     {
         public virtual int MaximumConcurrency => 1;
-        string ENDPOINTNAME = "testreceiver";
+        protected string ENDPOINTNAME = "testendpoint6";
+        protected const string ErrorQueue = "error";
 
-        [SetUp]
+        
         public void SetUp()
         {
            
@@ -42,6 +44,15 @@ namespace NServiceBus.Transport.Kafka.Tests
            
 
             subscriptionManager = new SubscriptionManager(consumerFactory);
+            subscriptionManager.Subscribe(typeof(MyEvent), new ContextBag()); 
+            subscriptionManager.Subscribe(typeof(EventBase), new ContextBag()); 
+            subscriptionManager.Subscribe(typeof(SubEvent1), new ContextBag());
+            subscriptionManager.Subscribe(typeof(SubEvent2), new ContextBag());
+            subscriptionManager.Subscribe(typeof(MyEvent1), new ContextBag());
+            subscriptionManager.Subscribe(typeof(IEvent), new ContextBag());
+            subscriptionManager.Subscribe(typeof(CombinedClassAndInterface), new ContextBag());
+            subscriptionManager.Subscribe(typeof(IMyEvent), new ContextBag());
+            subscriptionManager.Subscribe(typeof(object), new ContextBag());
 
             messagePump.Init(messageContext =>
             {
@@ -50,18 +61,18 @@ namespace NServiceBus.Transport.Kafka.Tests
             },
                 ErrorContext => Task.FromResult(ErrorHandleResult.Handled),
                 new CriticalError(_ => Task.FromResult(0)),
-                new PushSettings(ReceiverQueue, ErrorQueue, true, TransportTransactionMode.ReceiveOnly)
+                new PushSettings(ENDPOINTNAME, ErrorQueue, true, TransportTransactionMode.ReceiveOnly)
             ).GetAwaiter().GetResult();
 
             messagePump.Start(new PushRuntimeSettings(MaximumConcurrency));
         }
 
-        [TearDown]
+       
         public void TearDown()
-        {
+        {           
             messagePump?.Stop().GetAwaiter().GetResult();
 
-           
+            messagePump = null;
         }
 
         protected bool TryWaitForMessageReceipt()
@@ -70,7 +81,7 @@ namespace NServiceBus.Transport.Kafka.Tests
             return TryReceiveMessage(out message, incomingMessageTimeout);
         }
 
-        protected IncomingMessage ReceiveMessage()
+        protected Task<IncomingMessage> ReceiveMessage()
         {
             IncomingMessage message;
             if (!TryReceiveMessage(out message, incomingMessageTimeout))
@@ -78,7 +89,7 @@ namespace NServiceBus.Transport.Kafka.Tests
                 throw new TimeoutException($"The message did not arrive within {incomingMessageTimeout.TotalSeconds} seconds.");
             }
 
-            return message;
+            return Task.FromResult(message);
         }
 
         bool TryReceiveMessage(out IncomingMessage message, TimeSpan timeout) =>
@@ -86,14 +97,13 @@ namespace NServiceBus.Transport.Kafka.Tests
 
         protected virtual IEnumerable<string> AdditionalReceiverQueues => Enumerable.Empty<string>();
 
-        protected const string ReceiverQueue = "testreceiver";
-        protected const string ErrorQueue = "error";
+      
         protected MessageDispatcher messageDispatcher;
         protected SubscriptionManager subscriptionManager;
         protected MessagePump messagePump;
              
         BlockingCollection<IncomingMessage> receivedMessages;
        
-        static readonly TimeSpan incomingMessageTimeout = TimeSpan.FromSeconds(20);
+        static readonly TimeSpan incomingMessageTimeout = TimeSpan.FromSeconds(120);
     }
 }

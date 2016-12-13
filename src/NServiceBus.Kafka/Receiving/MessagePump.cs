@@ -66,38 +66,42 @@ namespace NServiceBus.Transport.Kafka.Receiving
             semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
 
             consumer = consumerFactory.GetConsumer();
-            consumer.Subscribe(new List<string>() { endpointName});
-            consumer.OnPartitionsAssigned += Consumer_OnPartitionsAssigned;
+
+            consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
+
+            consumer.AddSubscriptionsBlocking(new List<string>() { endpointName } );
+            consumer.CommitSubscriptionsBlocking();
             consumer.Start();
         }
 
-        List<TopicPartitionOffset> assigments = new List<TopicPartitionOffset>();
-
-        private void Consumer_OnPartitionsAssigned(object sender, List<TopicPartitionOffset> e)
+        private void Consumer_OnError(object sender, Handle.ErrorArgs e)
         {
-            //TODO: circuit breaker ok
-
-            foreach (var partition in e)
-            {
-                if (!assigments.Contains(partition))
-                    assigments.Add(partition);
-            }
-
-            consumer.Assign(assigments);
+            Logger.Error("Consumer_OnError: " + e.Reason);
+            consumer.Stop().Wait(30000);
+            consumerFactory.ResetConsumer();
+            consumer = consumerFactory.GetConsumer();
+            consumer.OnError += Consumer_OnError;
+            consumer.OnMessage += Consumer_OnMessage;
+            consumer.Start();
         }
 
         private void Consumer_OnMessage(object sender, Message e)
         {
             try
             {
+                Logger.Info($"Consumer_OnMessage");
+
                 var receiveTask = InnerReceive(e);
+
+                
 
                 runningReceiveTasks.TryAdd(receiveTask, receiveTask);
 
                 receiveTask.ContinueWith((t, state) =>
-                {
+                {                   
                     var receiveTasks = (ConcurrentDictionary<Task, Task>)state;
+                    
                     Task toBeRemoved;
                     receiveTasks.TryRemove(t, out toBeRemoved);
                 }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously);
@@ -111,13 +115,14 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
 
         async Task InnerReceive(Message retrieved)
-        {
-           
+        {           
             try
             {
                 var message = await retrieved.UnWrap();
 
                 await Process(message);
+
+                await consumer.Commit(retrieved);
             }
             
             catch (Exception ex)
@@ -218,6 +223,8 @@ namespace NServiceBus.Transport.Kafka.Receiving
              await connectionShutdownCompleted.Task.ConfigureAwait(false);*/
 
             // cancellationTokenSource.Cancel();
+
+            Logger.Info($"consumer.OnMessage -= Consumer_OnMessage");
 
             consumer.OnMessage -= Consumer_OnMessage;
             messageProcessing.Cancel();

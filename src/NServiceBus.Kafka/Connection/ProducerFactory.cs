@@ -8,19 +8,20 @@ using System.Threading.Tasks;
 namespace NServiceBus.Transports.Kafka.Connection
 {
     class ProducerFactory
-    {
-        
+    {        
         Producer instance;
         string connectionString;
 
         public ProducerFactory(string connectionString)
         {
             this.connectionString = connectionString;
+
+            instance = new Producer(this.connectionString);
         }
 
         public Producer GetProducer()
         {
-            instance = new Producer(this.connectionString);
+            
             return instance;
         }
     }

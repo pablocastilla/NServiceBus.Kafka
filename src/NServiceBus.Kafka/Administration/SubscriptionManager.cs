@@ -21,10 +21,10 @@ namespace NServiceBus.Transports.Kafka.Administration
         }
 
         public Task Subscribe(Type eventType, ContextBag context)
-        {
-           
+        {           
+            var topics = SetupTypeSubscriptions( eventType);
 
-            SetupTypeSubscriptions( eventType);
+            CreateSubscription(topics);
 
             return Task.FromResult(0); 
         }
@@ -38,12 +38,15 @@ namespace NServiceBus.Transports.Kafka.Administration
             return Task.FromResult(0);
         }
 
-       
 
-        void SetupTypeSubscriptions(Type type)
-        {          
+
+        HashSet<string> SetupTypeSubscriptions(Type type)
+        {
+            HashSet<string> topicsToSubscribe = new HashSet<string>();
+
             var typeToProcess = type;
-            CreateSubscription( ExchangeName(typeToProcess));
+            topicsToSubscribe.Add(ExchangeName(typeToProcess));
+           
             var baseType = typeToProcess.BaseType;
 
             while (baseType != null)
@@ -53,44 +56,45 @@ namespace NServiceBus.Transports.Kafka.Administration
                     continue;
                 }
 
-                CreateSubscription( ExchangeName(baseType));
-                
+                topicsToSubscribe.Add(ExchangeName(baseType));
+                               
                 typeToProcess = baseType;
                 baseType = typeToProcess.BaseType;
             }
 
             foreach (var interfaceType in type.GetInterfaces())
-            {
-                var exchangeName = ExchangeName(interfaceType);
-
-                CreateSubscription( exchangeName);
-               
+            {              
+                topicsToSubscribe.Add(ExchangeName(interfaceType));
             }
 
+            return topicsToSubscribe;
            
         }
 
-        void CreateSubscription(string exchangeName)
+        void CreateSubscription(HashSet<string> topics)
         {
-            if (IsTypeTopologyKnownConfigured(exchangeName))
+            var finalTopics = topics.Where(t => !typeTopologyConfiguredSet.ContainsKey(t));
+
+            if (finalTopics.Count() == 0)
                 return;
 
             var consumer = consumerFactory.GetConsumer();
-            consumer.Subscribe(new List<string>() { exchangeName });
-            /* consumer.OnPartitionsAssigned += Consumer_OnPartitionsAssigned;
+            var subscriptionList = consumer.Subscription;
 
-             consumer.Start();*/
-            //consumer.Start();
+            foreach (var exchangeName in finalTopics)
+            {
+                if (!subscriptionList.Contains(exchangeName))
+                    subscriptionList.Add(exchangeName);
 
-            MarkTypeConfigured(exchangeName,consumer);
+                MarkTypeConfigured(exchangeName, consumer);
+
+            }
+
+            consumer.AddSubscriptionsBlocking(subscriptionList);
+           
         }
 
-       /* private void Consumer_OnPartitionsAssigned(object sender, List<TopicPartitionOffset> e)
-        {
-            //TODO: circuit breaker ok
-
-            ((EventConsumer)sender).Assign(e);
-        }*/
+       
 
         bool IsTypeTopologyKnownConfigured(string exchangeName) => typeTopologyConfiguredSet.ContainsKey(exchangeName);
         readonly ConcurrentDictionary<string, EventConsumer> typeTopologyConfiguredSet = new ConcurrentDictionary<string, EventConsumer>();
