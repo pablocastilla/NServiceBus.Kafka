@@ -6,6 +6,7 @@
     using Transport;
     using Transport.Kafka.Tests;
     using System;
+    using System.Linq;
     using System.Runtime.Serialization.Formatters.Binary;
     using System.IO;
     using System.Collections.Generic;
@@ -14,144 +15,144 @@
     [TestFixture]
     class When_subscribed_to_a_event : KafkaContext
     {
-        bool initiated = false;
-
-        [OneTimeSetUp]
-        public void SetUpp()
-        {
-            if (initiated)
-                return;
-
-            base.SetUp();
-
-            initiated = true;
-        }
-
-        [OneTimeTearDown]
-        public void TearDownn()
-        {         
-            base.TearDown();
-        }
+       
 
         [Test]
         public async Task Should_receive_published_events_of_that_type()
         {
+            base.SetUp(typeof(MyEvent));
+
             await Publish<MyEvent>();
-            AssertReceived<MyEvent>();
 
-            /*var type = typeof(MyEvent);
-            var m = new MyEvent();
+            var receivedMessages = ReceiveMessages(10, 5);
 
-            var message = new OutgoingMessageBuilder().WithBody(ObjectToByteArray(m)).CorrelationId(type.FullName).PublishType(type).Build();
+            Assert.IsTrue( receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyEvent).FullName));
 
-            await messageDispatcher.Dispatch(message, new TransportTransaction(), new ContextBag());
-                              
-            var receivedMessage = ReceiveMessage().Result;         
 
-            Assert.IsTrue(receivedMessage!=null);*/
-            
         }
 
         [Test]
         public async Task Should_receive_the_event_if_subscribed_to_the_base_class()
-        {        
+        {
+            base.SetUp(typeof(EventBase));
             await Publish<SubEvent1>();
             await Publish<SubEvent2>();
 
-            AssertReceived<SubEvent1>();
-            AssertReceived<SubEvent2>();
+
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(SubEvent1).FullName));
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(SubEvent2).FullName));
         }
 
         [Test]
         public async Task Should_not_receive_the_event_if_subscribed_to_the_specific_class()
         {
-        //    await Subscribe<SubEvent1>();
+            base.SetUp(typeof(SubEvent1));            
 
             await Publish<EventBase>();
 
-            AssertNoEventReceived();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsFalse(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(EventBase).FullName));
         }
 
         [Test]
         public async Task Should_receive_the_event_if_subscribed_to_the_base_interface()
         {
-        //    await Subscribe<IMyEvent>();
+            base.SetUp(typeof(IMyEvent));          
 
             await Publish<MyEvent1>();
             await Publish<MyEvent2>();
 
-            AssertReceived<MyEvent1>();
-            AssertReceived<MyEvent2>();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyEvent1).FullName));
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyEvent2).FullName));
+           
         }
 
         [Test]
         public async Task Should_not_receive_the_event_if_subscribed_to_specific_interface()
         {
-         //   await Subscribe<MyEvent1>();
+           
+            base.SetUp(typeof(MyEvent1));
 
             await Publish<IMyEvent>();
 
-            AssertNoEventReceived();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsFalse(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(IMyEvent).FullName));
+          
         }
 
         [Test]
         public async Task Should_not_receive_events_of_other_types()
         {
-         //   await Subscribe<MyEvent>();
+            base.SetUp(typeof(MyEvent1));
+            
 
             //publish a event that that this publisher isn't subscribed to
             await Publish<MyOtherEvent>();
             await Publish<MyEvent>();
 
-            AssertReceived<MyEvent>();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyEvent).FullName));
+            Assert.IsFalse(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyOtherEvent).FullName));
+          
         }
 
         [Test]
         public async Task Subscribing_to_IEvent_should_subscribe_to_all_published_messages()
         {
-         //   await Subscribe<IEvent>();
+            
+            base.SetUp(typeof(IEvent));
 
             await Publish<MyOtherEvent>();
             await Publish<MyEvent>();
 
-            AssertReceived<MyOtherEvent>();
-            AssertReceived<MyEvent>();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyOtherEvent).FullName));
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyEvent).FullName));
+            
         }
 
         [Test]
         public async Task Subscribing_to_Object_should_subscribe_to_all_published_messages()
         {
-          //  await Subscribe<object>();
+            base.SetUp(typeof(object));
+            
 
             await Publish<MyOtherEvent>();
             await Publish<MyEvent>();
 
-            AssertReceived<MyOtherEvent>();
-            AssertReceived<MyEvent>();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyOtherEvent).FullName));
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(MyEvent).FullName));
+            
         }
 
         [Test]
         public async Task Subscribing_to_a_class_implementing_a_interface_should_only_give_the_concrete_class()
-        {
-           // await Subscribe<CombinedClassAndInterface>();
+        {            
+            base.SetUp(typeof(CombinedClassAndInterface));
 
             await Publish<CombinedClassAndInterface>();
             await Publish<IMyEvent>();
 
-            AssertReceived<CombinedClassAndInterface>();
-            AssertNoEventReceived();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(CombinedClassAndInterface).FullName));
+            Assert.IsFalse(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(IMyEvent).FullName));
+
         }
 
         [Test]
         public async Task Subscribing_to_a_interface_that_is_implemented_be_a_class_should_give_the_event_if_the_class_is_published()
-        {
-           // await Subscribe<IMyEvent>();
+        {           
+            base.SetUp(typeof(IMyEvent));
 
             await Publish<CombinedClassAndInterface>();
             await Publish<IMyEvent>();
 
-            AssertReceived<CombinedClassAndInterface>();
-            AssertReceived<IMyEvent>();
+            var receivedMessages = ReceiveMessages(10, 5);
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(CombinedClassAndInterface).FullName));
+            Assert.IsTrue(receivedMessages.Any(m => m.Headers["NServiceBus.CorrelationId"] == typeof(IMyEvent).FullName));
         }
 
         [Test]
@@ -176,16 +177,16 @@
 
             var message = new OutgoingMessageBuilder().WithBody(ObjectToByteArray(m)).CorrelationId(type.FullName).PublishType(type).Build();
 
-            messageDispatcher.Dispatch(message, new TransportTransaction(), new ContextBag());
+            messageDispatcher.Dispatch(message, new TransportTransaction(), new ContextBag()).Wait();
 
             return Task.FromResult(0);
         }
 
         void AssertReceived<T>()
         {
-            /*var receivedMessage = ReceiveMessage();
+            var receivedMessage = ReceiveMessage();
 
-            AssertReceived<T>(receivedMessage);*/
+            AssertReceived<T>(receivedMessage.Result);
         }
 
         void AssertReceived<T>(IncomingMessage receivedEvent)

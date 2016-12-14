@@ -17,12 +17,13 @@ namespace NServiceBus.Transports.Kafka.Connection
             this.connectionString = connectionString;
 
             instance = new Producer(this.connectionString);
+
         }
 
         public Producer GetProducer()
-        {
-            
-            return instance;
+        {            
+            return new Producer(this.connectionString);
+
         }
     }
 }

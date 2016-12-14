@@ -1,4 +1,5 @@
-﻿using NServiceBus.Logging;
+﻿using Janitor;
+using NServiceBus.Logging;
 using RdKafka;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,8 @@ using System.Threading.Tasks;
 
 namespace NServiceBus.Transports.Kafka.Connection
 {
-    class ConsumerFactory
+    [SkipWeaving]
+    class ConsumerFactory:IDisposable
     {
         static ILog Logger = LogManager.GetLogger(typeof(ConsumerFactory));
 
@@ -55,6 +57,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             }
         }
 
+       
         private void CreateConsumer(List<string> topics = null)
         {
             var config = new RdKafka.Config() { GroupId = endpointName, EnableAutoCommit = true };
@@ -105,7 +108,7 @@ namespace NServiceBus.Transports.Kafka.Connection
         {
             Logger.Info($"Assigned partitions: [{string.Join(", ", e)}], member id: {consumer.MemberId}");
 
-            if (e.Count == 0)
+            if (e.Count == 0 || disposing)
                 return;
 
             //TODO: circuit breaker ok
@@ -124,5 +127,54 @@ namespace NServiceBus.Transports.Kafka.Connection
             var partititionsToAssign = assigments.Values.Select(p => p).ToList();
             consumer.Assign(partititionsToAssign);
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+        private bool disposing = false;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            this.disposing = disposing;
+
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                    if (consumer != null)
+                    {
+                        consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
+                        consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
+                        consumer.OnEndReached -= Consumer_OnEndReached;
+                        consumer.Stop().Wait(20000);
+                        consumer.Dispose();
+                    }
+
+                    consumer = null;
+
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~ConsumerFactory() {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

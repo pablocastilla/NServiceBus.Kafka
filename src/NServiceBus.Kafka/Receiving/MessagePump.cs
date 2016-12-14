@@ -12,9 +12,11 @@ using System.Threading.Tasks;
 using NServiceBus.Transports.Kafka.Wrapper;
 using NServiceBus;
 using NServiceBus.Extensibility;
+using Janitor;
 
 namespace NServiceBus.Transport.Kafka.Receiving
 {
+    [SkipWeaving]
     class MessagePump : IPushMessages, IDisposable
     {
         Func<MessageContext, Task> onMessage;
@@ -226,6 +228,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
             Logger.Info($"consumer.OnMessage -= Consumer_OnMessage");
 
+            consumer.OnError -= Consumer_OnError;
             consumer.OnMessage -= Consumer_OnMessage;
             messageProcessing.Cancel();
             // ReSharper disable once MethodSupportsCancellation
@@ -240,12 +243,14 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
             
             runningReceiveTasks.Clear();
+
+            consumerFactory.Dispose();
         }
 
 
         public void Dispose()
         {
-            
+            consumerFactory.Dispose();
         }
     }
 }

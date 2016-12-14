@@ -22,9 +22,9 @@ namespace NServiceBus.Transports.Kafka.Administration
 
         public Task Subscribe(Type eventType, ContextBag context)
         {           
-            var topics = SetupTypeSubscriptions( eventType);
+           // var topics = GetTypeHierarchy( eventType);
 
-            CreateSubscription(topics);
+            CreateSubscription(new HashSet<string>() { ExchangeName(eventType) });
 
             return Task.FromResult(0); 
         }
@@ -40,7 +40,7 @@ namespace NServiceBus.Transports.Kafka.Administration
 
 
 
-        HashSet<string> SetupTypeSubscriptions(Type type)
+        internal static HashSet<string> GetTypeHierarchy(Type type)
         {
             HashSet<string> topicsToSubscribe = new HashSet<string>();
 
@@ -51,10 +51,10 @@ namespace NServiceBus.Transports.Kafka.Administration
 
             while (baseType != null)
             {
-                if (type == typeof(Object))
+                /*if (type == typeof(Object))
                 {
                     continue;
-                }
+                }*/
 
                 topicsToSubscribe.Add(ExchangeName(baseType));
                                
