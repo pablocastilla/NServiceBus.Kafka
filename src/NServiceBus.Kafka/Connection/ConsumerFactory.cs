@@ -1,4 +1,4 @@
-﻿using Janitor;
+﻿
 using NServiceBus.Logging;
 using RdKafka;
 using System;
@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace NServiceBus.Transports.Kafka.Connection
 {
-    [SkipWeaving]
+
     class ConsumerFactory:IDisposable
     {
         static ILog Logger = LogManager.GetLogger(typeof(ConsumerFactory));
@@ -49,14 +49,14 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         public void ResetConsumer()
         {
-
             lock (o)
             {
 
                 CreateConsumer(consumer.Subscription);
             }
-        }
 
+        }
+        
        
         private void CreateConsumer(List<string> topics = null)
         {
@@ -82,26 +82,11 @@ namespace NServiceBus.Transports.Kafka.Connection
             consumer.OnPartitionsRevoked += Consumer_OnPartitionsRevoked;
            
             consumer.OnEndReached += Consumer_OnEndReached;
-                       
-        }
 
-        private void Consumer_OnPartitionsRevoked(object sender, List<TopicPartitionOffset> partitions)
-        {
-            Logger.Info($"Revoked partitions: [{string.Join(", ", partitions)}]");
-            foreach (var p in partitions)
-                assigments.Remove(p.Topic + p.Partition);
-
-            var partititionsToAssign = assigments.Values.Select(p => p).ToList();
-            consumer.Assign(partititionsToAssign);
-        }
-
-        private void Consumer_OnEndReached(object sender, TopicPartitionOffset e)
-        {
-            Logger.Info("EndReached:" + e);
+                                  
         }
 
        
-
         Dictionary<string, TopicPartitionOffset> assigments = new Dictionary<string, TopicPartitionOffset>();
 
         private void Consumer_OnPartitionsAssigned(object sender, List<TopicPartitionOffset> e)
@@ -127,6 +112,29 @@ namespace NServiceBus.Transports.Kafka.Connection
             var partititionsToAssign = assigments.Values.Select(p => p).ToList();
             consumer.Assign(partititionsToAssign);
         }
+
+
+        private void Consumer_OnPartitionsRevoked(object sender, List<TopicPartitionOffset> partitions)
+        {
+            if (disposing || disposedValue)
+                return;
+
+            Logger.Info($"Revoked partitions: [{string.Join(", ", partitions)}]");
+            foreach (var p in partitions)
+                assigments.Remove(p.Topic + p.Partition);
+
+            var partititionsToAssign = assigments.Values.Select(p => p).ToList();
+
+            consumer.Assign(partititionsToAssign);
+        }
+
+        private void Consumer_OnEndReached(object sender, TopicPartitionOffset e)
+        {
+            Logger.Info("EndReached:" + e);
+        }
+
+
+
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls

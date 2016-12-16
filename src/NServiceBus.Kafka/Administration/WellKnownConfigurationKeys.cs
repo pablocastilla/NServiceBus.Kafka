@@ -9,7 +9,8 @@ namespace NServiceBus.Transports.Kafka.Administration
     static class WellKnownConfigurationKeys
     {
 
-        public const string MessageWrapperSerializationDefinition = "Transport.AzureStorageQueue.MessageWrapperSerializationDefinition";
+        public const string MessageWrapperSerializationDefinition = "Transport.Kafka.MessageWrapperSerializationDefinition";
+        public const string ConnectionString = "Transport.Kafka.ConnectionString";
 
     }
 }

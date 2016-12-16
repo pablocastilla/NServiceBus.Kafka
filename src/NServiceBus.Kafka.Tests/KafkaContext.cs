@@ -22,26 +22,27 @@ namespace NServiceBus.Transport.Kafka.Tests
     class KafkaContext
     {
         public virtual int MaximumConcurrency => 1;
-        protected string ENDPOINTNAME = "testendpoint7";
+        protected string endpointName = "endpointfortests";
         protected const string ErrorQueue = "error";
         
-        public void SetUp(params Type[] typesToSubscribeTo)
+        public void SetUp (params Type[] typesToSubscribeTo)
         {
            
             receivedMessages = new BlockingCollection<IncomingMessage>();
 
-            var connectionString = "127.0.0.1:9092";// Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString");
+            Environment.SetEnvironmentVariable("KafkaTransport.ConnectionString", "127.0.0.1:9092");
+            var connectionString =  Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString");//"127.0.0.1:9092"
             SettingsHolder settingsHolder = new SettingsHolder();
-           
-           
 
-            var kafkaTransport = new KafkaTransport();
+            settingsHolder.Set("NServiceBus.Routing.EndpointName", endpointName);
+
+             var kafkaTransport = new KafkaTransport();
             var infra = kafkaTransport.Initialize(settingsHolder, connectionString);
 
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
 
-            var consumerFactory = new Transports.Kafka.Connection.ConsumerFactory(connectionString, ENDPOINTNAME);
-            messagePump = new MessagePump(consumerFactory, ENDPOINTNAME);
+            var consumerFactory = new Transports.Kafka.Connection.ConsumerFactory(connectionString, endpointName);
+            messagePump = new MessagePump(consumerFactory, endpointName);
            
 
             subscriptionManager = new SubscriptionManager(consumerFactory);
@@ -59,7 +60,7 @@ namespace NServiceBus.Transport.Kafka.Tests
             },
                 ErrorContext => Task.FromResult(ErrorHandleResult.Handled),
                 new CriticalError(_ => Task.FromResult(0)),
-                new PushSettings(ENDPOINTNAME, ErrorQueue, true, TransportTransactionMode.ReceiveOnly)
+                new PushSettings(endpointName, ErrorQueue, true, TransportTransactionMode.ReceiveOnly)
             ).GetAwaiter().GetResult();
 
             messagePump.Start(new PushRuntimeSettings(MaximumConcurrency));
@@ -109,7 +110,7 @@ namespace NServiceBus.Transport.Kafka.Tests
                         if (receivedMessages.TryTake(out message, finalTimeout))
                         {
                             result.Add(message);
-                            finalTimeout = 200;
+                            finalTimeout = 1000;
                         }
                                               
                     }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using NServiceBus.Routing;
-using Janitor;
+
 using NServiceBus.Settings;
 using NServiceBus.Kafka.Sending;
 using NServiceBus.Performance.TimeToBeReceived;
@@ -12,24 +12,26 @@ using NServiceBus.Transport.Kafka.Receiving;
 using NServiceBus.Transports.Kafka.Wrapper;
 using NServiceBus.Serialization;
 using NServiceBus.Transports.Kafka.Administration;
+using NServiceBus.Transports.Kafka.Connection;
 
 namespace NServiceBus.Transport.Kafka
 {
 
-    [SkipWeaving]
+
     class KafkaTransportInfrastructure : TransportInfrastructure, IDisposable
     {
         readonly SettingsHolder settings;
         readonly string connectionString;
         private static MessageWrapperSerializer serializer;
         static Object o = new Object();
+        ConsumerFactory consumerFactory;
 
         public KafkaTransportInfrastructure(SettingsHolder settings, string connectionString)
         {
             this.settings = settings;
             this.connectionString = connectionString;
             serializer = BuildSerializer(settings);
-
+            consumerFactory = new ConsumerFactory(connectionString, settings.EndpointName());
         }
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
@@ -80,12 +82,24 @@ namespace NServiceBus.Transport.Kafka
       
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
-            throw new NotImplementedException();
+            return new TransportSubscriptionInfrastructure(() => new SubscriptionManager(consumerFactory));
         }
 
         public override string ToTransportAddress(LogicalAddress logicalAddress)
         {
-            throw new NotImplementedException();
+            var topic = new StringBuilder(logicalAddress.EndpointInstance.Endpoint);
+
+            if (logicalAddress.EndpointInstance.Discriminator != null)
+            {
+                topic.Append("-" + logicalAddress.EndpointInstance.Discriminator);
+            }
+
+            if (logicalAddress.Qualifier != null)
+            {
+                topic.Append("." + logicalAddress.Qualifier);
+            }
+
+            return topic.ToString();
         }
 
         static MessageWrapperSerializer BuildSerializer(ReadOnlySettings settings)

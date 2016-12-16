@@ -12,11 +12,11 @@ using System.Threading.Tasks;
 using NServiceBus.Transports.Kafka.Wrapper;
 using NServiceBus;
 using NServiceBus.Extensibility;
-using Janitor;
+
 
 namespace NServiceBus.Transport.Kafka.Receiving
 {
-    [SkipWeaving]
+
     class MessagePump : IPushMessages, IDisposable
     {
         Func<MessageContext, Task> onMessage;
@@ -74,7 +74,14 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
             consumer.AddSubscriptionsBlocking(new List<string>() { endpointName } );
             consumer.CommitSubscriptionsBlocking();
-            consumer.Start();
+
+            try
+            {
+                consumer.Start();
+
+            }
+            catch
+            { }
         }
 
         private void Consumer_OnError(object sender, Handle.ErrorArgs e)
@@ -208,24 +215,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
         public async Task Stop()
         {
-            /* consumer.OnMessage -= Consumer_OnMessage;
-             messageProcessing.Cancel();
-
-             while (semaphore.CurrentCount != maxConcurrency)
-             {
-                 await Task.Delay(50).ConfigureAwait(false);
-             }
-
-             connectionShutdownCompleted = new TaskCompletionSource<bool>();
-
-             consumer.Unsubscribe();
-
-             connectionShutdownCompleted.SetResult(true);
-
-             await connectionShutdownCompleted.Task.ConfigureAwait(false);*/
-
-            // cancellationTokenSource.Cancel();
-
+            
             Logger.Info($"consumer.OnMessage -= Consumer_OnMessage");
 
             consumer.OnError -= Consumer_OnError;

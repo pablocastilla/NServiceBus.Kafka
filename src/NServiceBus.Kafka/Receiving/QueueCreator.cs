@@ -11,7 +11,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
     {
         public Task CreateQueueIfNecessary(QueueBindings queueBindings, string identity)
         {
-            throw new NotImplementedException();
+
+            return Task.FromResult(0);
+
         }
     }
 }
