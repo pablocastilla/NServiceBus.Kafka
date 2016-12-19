@@ -155,7 +155,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                         consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
                         consumer.OnEndReached -= Consumer_OnEndReached;
                         consumer.Stop().Wait(20000);
-                        consumer.Dispose();
+                        //consumer.Dispose();
                     }
 
                     consumer = null;
