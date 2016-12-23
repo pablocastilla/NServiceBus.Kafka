@@ -75,13 +75,8 @@ namespace NServiceBus.Transport.Kafka.Receiving
             consumer.AddSubscriptionsBlocking(new List<string>() { endpointName } );
             consumer.CommitSubscriptionsBlocking();
 
-            try
-            {
-                consumer.Start();
 
-            }
-            catch
-            { }
+            consumerFactory.StartConsumer();
         }
 
         private void Consumer_OnError(object sender, Handle.ErrorArgs e)
@@ -92,18 +87,14 @@ namespace NServiceBus.Transport.Kafka.Receiving
             consumer = consumerFactory.GetConsumer();
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
-            consumer.Start();
+            consumerFactory.StartConsumer();
         }
 
         private void Consumer_OnMessage(object sender, Message e)
         {
             try
-            {
-                Logger.Info($"Consumer_OnMessage");
-
-                var receiveTask = InnerReceive(e);
-
-                
+            {                
+                var receiveTask = InnerReceive(e);                
 
                 runningReceiveTasks.TryAdd(receiveTask, receiveTask);
 

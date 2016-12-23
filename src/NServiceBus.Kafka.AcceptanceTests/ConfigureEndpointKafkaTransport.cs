@@ -32,20 +32,14 @@ public class ConfigureEndpointKafkaTransport : IConfigureEndpointTestExecution
     }
 
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
-    {
-        connectionStringBuilder = new DbConnectionStringBuilder
-        {
-            ConnectionString = Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString") ?? "127.0.0.1:9092"
-        };
-
-
-        configuration.UseTransport<KafkaTransport>().ConnectionString(connectionStringBuilder.ConnectionString);
+    {          
+        configuration.UseTransport<KafkaTransport>().ConnectionString(Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString") ?? "127.0.0.1:9092");
 
         return TaskEx.CompletedTask;
     }
 
     public Task Cleanup()
     {
-        throw new NotImplementedException();
+        return TaskEx.CompletedTask;
     }
 }

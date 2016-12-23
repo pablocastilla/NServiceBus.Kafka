@@ -9,6 +9,7 @@
     using Features;
     using NServiceBus.Config.ConfigurationSource;
     using NServiceBus.Serialization;
+    using Transport.Kafka;
 
     public class DefaultServer : IEndpointSetupTemplate
     {
@@ -26,6 +27,7 @@
         {
             var settings = runDescriptor.Settings;
 
+            settings.Set("Transport", typeof(KafkaTransport));
             var types = endpointConfiguration.GetTypesScopedByTestClass();
 
             typesToInclude.AddRange(types);

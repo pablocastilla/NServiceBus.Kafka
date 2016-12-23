@@ -20,7 +20,9 @@ namespace NServiceBus.Transports.Kafka.Connection
         static EventConsumer consumer;
         static Object o = new Object();
 
-        
+        public static bool ConsumerStarted { get; set; }
+
+
         public ConsumerFactory(string connectionString, string endpointName)
         {
             this.connectionString = connectionString;
@@ -32,9 +34,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                 {
                     if (consumer == null)
                     {
-
                         CreateConsumer();
-
 
                     }
                 }
@@ -42,8 +42,7 @@ namespace NServiceBus.Transports.Kafka.Connection
         }
 
         public EventConsumer GetConsumer()
-        {
-                  
+        {                  
            return consumer;
         }
 
@@ -51,16 +50,32 @@ namespace NServiceBus.Transports.Kafka.Connection
         {
             lock (o)
             {
-
+                ConsumerStarted = false;
                 CreateConsumer(consumer.Subscription);
             }
 
         }
-        
-       
+
+        public void StartConsumer()
+        {
+            if (!ConsumerStarted)
+            {
+                lock (o)
+                {
+                    if (!ConsumerStarted)
+                    {
+                        ConsumerStarted = true;
+                        consumer.Start();
+                    }
+                }
+            }
+        }
+
+
         private void CreateConsumer(List<string> topics = null)
         {
             var config = new RdKafka.Config() { GroupId = endpointName, EnableAutoCommit = true };
+            config["debug"] = "all";
             var defaultConfig = new TopicConfig();
             defaultConfig["auto.offset.reset"] = "earliest";
             config.DefaultTopicConfig = defaultConfig;
@@ -154,7 +169,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                         consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
                         consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
                         consumer.OnEndReached -= Consumer_OnEndReached;
-                        consumer.Stop().Wait(20000);
+                        consumer.Stop();
                         //consumer.Dispose();
                     }
 
