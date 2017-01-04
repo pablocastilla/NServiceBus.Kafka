@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Transport.RabbitMQ.AcceptanceTests
+﻿namespace NServiceBus.Transport.Kafka.AcceptanceTests
 {
     using System;
     using System.Threading.Tasks;
@@ -32,7 +32,8 @@
                            c.ServerBSubscribed = true;
                        });
                    })
-                   .Run(TimeSpan.FromSeconds(10));
+                   .Done(c => c.Counter>0)
+                   .Run();
 
             Assert.AreEqual(1, context.Counter, "One of the scaled out instances should get the event");
         }

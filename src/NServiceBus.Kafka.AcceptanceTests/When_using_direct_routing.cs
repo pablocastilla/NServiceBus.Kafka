@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Transport.RabbitMQ.AcceptanceTests
+﻿namespace NServiceBus.Transport.Kafka.AcceptanceTests
 {
     using System.Threading.Tasks;
     using AcceptanceTesting;
@@ -31,7 +31,7 @@
                 EndpointSetup<DefaultServer>(c => c.UseTransport<KafkaTransport>().ConnectionString("127.0.0.1:9092"));
             }
 
-            class MyEventHandler : IHandleMessages<MyRequest>
+            public class MyEventHandler : IHandleMessages<MyRequest>
             {
                 readonly MyContext myContext;
 
@@ -49,11 +49,11 @@
             }
         }
 
-        class MyRequest : IMessage
+        public class MyRequest : IMessage
         {
         }
 
-        class MyContext : ScenarioContext
+        public class MyContext : ScenarioContext
         {
             public bool GotTheMessage { get; set; }
         }

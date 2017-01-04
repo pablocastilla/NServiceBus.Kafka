@@ -31,9 +31,10 @@ namespace NServiceBus.Transport.Kafka
             settings.GetOrCreate<Conventions>().AddSystemMessagesConventions(t => t == typeof(MessageWrapper));
 
             // TODO: register metadata of the wrapper for the sake of XML serializer
-           // settings.Get<MessageMetadataRegistry>().GetMessageMetadata(typeof(MessageWrapper));
+            settings.Get<MessageMetadataRegistry>().GetMessageMetadata(typeof(MessageWrapper));
 
-            settings.SetDefault(WellKnownConfigurationKeys.ConnectionString, connectionString);                       
+            settings.SetDefault(WellKnownConfigurationKeys.ConnectionString, connectionString);    
+                               
 
             return new KafkaTransportInfrastructure(settings, connectionString);
         }

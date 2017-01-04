@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 using NServiceBus;
 using NServiceBus.AcceptanceTesting.Support;
 using NServiceBus.AcceptanceTests.ScenarioDescriptors;
-using NServiceBus.Transport.RabbitMQ.AcceptanceTests;
+using NServiceBus.Transport.Kafka.AcceptanceTests;
 using NServiceBus.Transport.Kafka;
 
 public class ConfigureScenariosForKafkaTransport : IConfigureSupportedScenariosForTestExecution

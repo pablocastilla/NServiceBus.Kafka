@@ -74,10 +74,12 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         private void CreateConsumer(List<string> topics = null)
         {
-            var config = new RdKafka.Config() { GroupId = endpointName, EnableAutoCommit = true };
+            var config = new RdKafka.Config() { GroupId = endpointName, EnableAutoCommit = false };
             config["debug"] = "all";
             var defaultConfig = new TopicConfig();
             defaultConfig["auto.offset.reset"] = "earliest";
+            config["session.timeout.ms"]= "30000";  
+            config["heartbeat.interval.ms"] = "30000";
             config.DefaultTopicConfig = defaultConfig;
 
             if(consumer!=null)
@@ -125,7 +127,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             }
 
             var partititionsToAssign = assigments.Values.Select(p => p).ToList();
-            consumer.Assign(partititionsToAssign);
+            ((EventConsumer)sender).Assign(partititionsToAssign);
         }
 
 
@@ -140,7 +142,8 @@ namespace NServiceBus.Transports.Kafka.Connection
 
             var partititionsToAssign = assigments.Values.Select(p => p).ToList();
 
-            consumer.Assign(partititionsToAssign);
+            //((EventConsumer)sender).Assign(partititionsToAssign);
+            ((EventConsumer)sender).Unassign();
         }
 
         private void Consumer_OnEndReached(object sender, TopicPartitionOffset e)

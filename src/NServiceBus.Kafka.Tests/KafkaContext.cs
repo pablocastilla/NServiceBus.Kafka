@@ -71,7 +71,7 @@ namespace NServiceBus.Transport.Kafka.Tests
         [TearDown]
         public void TearDown()
         {           
-            messagePump?.Stop().GetAwaiter().GetResult();
+            //messagePump?.Stop().GetAwaiter().GetResult();
 
             messagePump = null;
         }
