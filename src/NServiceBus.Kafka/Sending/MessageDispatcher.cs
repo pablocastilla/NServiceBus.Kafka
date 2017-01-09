@@ -28,7 +28,7 @@ namespace NServiceBus.Kafka.Sending
 
         public async Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
         {
-            Logger.Info("Dispatch");
+           
 
             try
             {
@@ -56,7 +56,8 @@ namespace NServiceBus.Kafka.Sending
         }
 
         async Task SendMessage(UnicastTransportOperation transportOperation)
-        {           
+        {
+            Logger.Info("Send to "+ transportOperation.Destination);
             var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue, transportOperation.Destination);
 
             var topic = producerFactory.GetProducer().Topic(transportOperation.Destination);
@@ -69,6 +70,7 @@ namespace NServiceBus.Kafka.Sending
 
         async Task PublishMessage(MulticastTransportOperation transportOperation)
         {
+
             var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue, transportOperation.MessageType.ToString());
 
             var topicsToSendTo = SubscriptionManager.GetTypeHierarchy(transportOperation.MessageType);
@@ -78,6 +80,7 @@ namespace NServiceBus.Kafka.Sending
 
             foreach (var t in topicsToSendTo)
             {
+                Logger.Info("Publish to " + t);
                 var topic = producerFactory.GetProducer().Topic(t);                              
 
                 await topic.Produce(messageStream.ToArray()).ContinueWith(result => Logger.Info("new partition and offset: "+result.Result.Partition+" "+result.Result.Offset));

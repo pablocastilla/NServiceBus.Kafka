@@ -17,10 +17,10 @@ namespace NServiceBus.Transports.Kafka.Connection
         string connectionString;
         string endpointName;
 
-        static EventConsumer consumer;
+        EventConsumer consumer;
         static Object o = new Object();
 
-        public static bool ConsumerStarted { get; set; }
+        public bool ConsumerStarted { get; set; }
 
 
         public ConsumerFactory(string connectionString, string endpointName)
@@ -78,13 +78,13 @@ namespace NServiceBus.Transports.Kafka.Connection
             config["debug"] = "all";
             var defaultConfig = new TopicConfig();
             defaultConfig["auto.offset.reset"] = "earliest";
-            config["session.timeout.ms"]= "10000";  
-            config["heartbeat.interval.ms"] = "15000";
+            config["session.timeout.ms"]= "15000";  
+            config["heartbeat.interval.ms"] = "5000";
             config.DefaultTopicConfig = defaultConfig;
 
             if(consumer!=null)
             {
-                consumer.Dispose();
+               // consumer.Dispose();
             }
             
             consumer = new EventConsumer(config, connectionString);
@@ -169,11 +169,13 @@ namespace NServiceBus.Transports.Kafka.Connection
                     // TODO: dispose managed state (managed objects).
                     if (consumer != null)
                     {
+                        Logger.Info("Disposing " + consumer.Name);
+
                         consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
                         consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
                         consumer.OnEndReached -= Consumer_OnEndReached;
                         consumer.Stop();
-                        //consumer.Dispose();
+                       // consumer.Dispose();
                     }
 
                     consumer = null;

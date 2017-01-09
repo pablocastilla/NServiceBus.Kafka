@@ -12,10 +12,9 @@
         [Test]
         public async Task Should_receive_the_message()
         {
-            var context = await Scenario.Define<Context>(c => { c.Id = Guid.NewGuid(); })
-                 .WithEndpoint<Receiver>()
+            var context = await Scenario.Define<Context>(c => { c.Id = Guid.NewGuid(); })                 
                 .WithEndpoint<Sender>(b => b.When((session, c) =>
-                {
+                {                    
                     var sendOptions = new SendOptions();
 
                     sendOptions.SetHeader("MyHeader", "MyHeaderValue");
@@ -26,7 +25,7 @@
                         Id = c.Id
                     }, sendOptions);
                 }))
-               
+               .WithEndpoint<Receiver>()
                 .Done(c => c.WasCalled)
                 .Run();
 

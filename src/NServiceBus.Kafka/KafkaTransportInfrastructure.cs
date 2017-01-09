@@ -36,7 +36,7 @@ namespace NServiceBus.Transport.Kafka
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
-            return new TransportReceiveInfrastructure(() => new MessagePump(new Transports.Kafka.Connection.ConsumerFactory(connectionString, settings.EndpointName()), settings.EndpointName()), 
+            return new TransportReceiveInfrastructure(() => new MessagePump(consumerFactory, settings.EndpointName()), 
                 () => new QueueCreator(), 
                 () => Task.FromResult(StartupCheckResult.Success));
         }
@@ -141,6 +141,7 @@ namespace NServiceBus.Transport.Kafka
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects).
+                    consumerFactory.Dispose();
                 }
 
              

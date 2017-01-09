@@ -93,7 +93,8 @@ namespace NServiceBus.Transport.Kafka.Receiving
         private void Consumer_OnMessage(object sender, Message e)
         {
             try
-            {                
+            {
+                Logger.Info($"message consumed");
                 var receiveTask = InnerReceive(e);                
 
                 runningReceiveTasks.TryAdd(receiveTask, receiveTask);
@@ -226,13 +227,13 @@ namespace NServiceBus.Transport.Kafka.Receiving
             
             runningReceiveTasks.Clear();
 
-            consumerFactory.Dispose();
+           
         }
 
 
         public void Dispose()
         {
-            consumerFactory.Dispose();
+            //consumerFactory.Dispose();
         }
     }
 }
