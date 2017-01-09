@@ -118,7 +118,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         {           
             try
             {
-                var message = await retrieved.UnWrap();
+                var message = await retrieved.UnWrap().ConfigureAwait(false);
 
                 await Process(message);
 
@@ -182,6 +182,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
                     }
                     catch (Exception ex)
                     {
+                        Logger.Error($"error onMessage: "+ex.ToString());
                         ++numberOfDeliveryAttempts;
                         var errorContext = new ErrorContext(ex, headers, messageId, message.Body ?? new byte[0], transportTranaction, numberOfDeliveryAttempts);
                         errorHandled = await onError(errorContext).ConfigureAwait(false) == ErrorHandleResult.Handled;

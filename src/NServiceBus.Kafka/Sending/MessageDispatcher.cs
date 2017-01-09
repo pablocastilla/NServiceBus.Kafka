@@ -26,7 +26,7 @@ namespace NServiceBus.Kafka.Sending
             this.producerFactory = producerFactory;
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
+        public async Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
         {
             Logger.Info("Dispatch");
 
@@ -44,10 +44,10 @@ namespace NServiceBus.Kafka.Sending
 
                 foreach (var operation in multicastTransportOperations)
                 {                    
-                    tasks.AddRange(PublishMessage(operation));
+                    tasks.Add(PublishMessage(operation));
                 }
 
-                return tasks.Count == 1 ? tasks[0] : Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
             }
             finally
             {
@@ -55,19 +55,19 @@ namespace NServiceBus.Kafka.Sending
             }
         }
 
-        Task SendMessage(UnicastTransportOperation transportOperation)
+        async Task SendMessage(UnicastTransportOperation transportOperation)
         {           
             var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue, transportOperation.Destination);
 
             var topic = producerFactory.GetProducer().Topic(transportOperation.Destination);
 
             var messageStream = new MemoryStream();
-            KafkaTransportInfrastructure.GetSerializer().Serialize(messageWrapper, messageStream);
-            
-            return topic.Produce(messageStream.ToArray());
+            KafkaTransportInfrastructure.GetSerializer().Serialize(messageWrapper, messageStream);            
+           
+            await topic.Produce(messageStream.ToArray());
         }
 
-        IEnumerable<Task> PublishMessage(MulticastTransportOperation transportOperation)
+        async Task PublishMessage(MulticastTransportOperation transportOperation)
         {
             var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue, transportOperation.MessageType.ToString());
 
@@ -80,7 +80,7 @@ namespace NServiceBus.Kafka.Sending
             {
                 var topic = producerFactory.GetProducer().Topic(t);                              
 
-                yield return topic.Produce(messageStream.ToArray()).ContinueWith(result => Logger.Info("new partition and offset: "+result.Result.Partition+" "+result.Result.Offset));
+                await topic.Produce(messageStream.ToArray()).ContinueWith(result => Logger.Info("new partition and offset: "+result.Result.Partition+" "+result.Result.Offset));
             }
 
            

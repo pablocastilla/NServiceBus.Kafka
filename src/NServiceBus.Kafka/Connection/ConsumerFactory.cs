@@ -78,8 +78,8 @@ namespace NServiceBus.Transports.Kafka.Connection
             config["debug"] = "all";
             var defaultConfig = new TopicConfig();
             defaultConfig["auto.offset.reset"] = "earliest";
-            config["session.timeout.ms"]= "30000";  
-            config["heartbeat.interval.ms"] = "30000";
+            config["session.timeout.ms"]= "10000";  
+            config["heartbeat.interval.ms"] = "15000";
             config.DefaultTopicConfig = defaultConfig;
 
             if(consumer!=null)
@@ -108,7 +108,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         private void Consumer_OnPartitionsAssigned(object sender, List<TopicPartitionOffset> e)
         {
-            Logger.Info($"Assigned partitions: [{string.Join(", ", e)}], member id: {consumer.MemberId}");
+            Logger.Info($"Assigned partitions: [{string.Join(", ", e)}], member id: {((EventConsumer)sender).MemberId}");
 
             if (e.Count == 0 || disposing)
                 return;

@@ -27,7 +27,7 @@
         {
             var settings = runDescriptor.Settings;
 
-            settings.Set("Transport", typeof(KafkaTransport));
+            //settings.Set("Transport", typeof(KafkaTransport));
             var types = endpointConfiguration.GetTypesScopedByTestClass();
 
             typesToInclude.AddRange(types);
@@ -39,6 +39,7 @@
             configuration.EnableInstallers();
 
             configuration.DisableFeature<TimeoutManager>();
+            //configuration.DisableFeature<Audit>();
 
             var recoverability = configuration.Recoverability();
             recoverability.Delayed(delayed => delayed.NumberOfRetries(0));

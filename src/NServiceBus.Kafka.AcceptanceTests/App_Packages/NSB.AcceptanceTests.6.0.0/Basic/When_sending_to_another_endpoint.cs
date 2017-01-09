@@ -13,6 +13,7 @@
         public async Task Should_receive_the_message()
         {
             var context = await Scenario.Define<Context>(c => { c.Id = Guid.NewGuid(); })
+                 .WithEndpoint<Receiver>()
                 .WithEndpoint<Sender>(b => b.When((session, c) =>
                 {
                     var sendOptions = new SendOptions();
@@ -25,7 +26,7 @@
                         Id = c.Id
                     }, sendOptions);
                 }))
-                .WithEndpoint<Receiver>()
+               
                 .Done(c => c.WasCalled)
                 .Run();
 
@@ -52,7 +53,8 @@
         {
             public Sender()
             {
-                EndpointSetup<DefaultServer>(c => { c.AddHeaderToAllOutgoingMessages("MyStaticHeader", "StaticHeaderValue"); }).AddMapping<MyMessage>(typeof(Receiver));
+                EndpointSetup<DefaultServer>(c => { c.AddHeaderToAllOutgoingMessages("MyStaticHeader", "StaticHeaderValue"); })
+                    .AddMapping<MyMessage>(typeof(Receiver));
             }
         }
 

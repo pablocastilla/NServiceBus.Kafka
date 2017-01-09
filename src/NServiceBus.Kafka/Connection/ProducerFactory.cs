@@ -9,14 +9,23 @@ namespace NServiceBus.Transports.Kafka.Connection
 {
     class ProducerFactory
     {        
-        Producer instance;
+        static Producer instance;
         string connectionString;
-
+        object o = new object();
+                
         public ProducerFactory(string connectionString)
         {
             this.connectionString = connectionString;
 
-            instance = new Producer(this.connectionString);
+        
+            if(instance==null)
+            {
+                lock (o)
+                {
+                    if(instance==null)
+                        instance = new Producer(this.connectionString);
+                }
+            }
 
         }
 
