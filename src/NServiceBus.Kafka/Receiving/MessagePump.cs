@@ -94,7 +94,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         {
             try
             {
-                Logger.Info($"message consumed");
+                Logger.Info($"message consumed"); 
                 var receiveTask = InnerReceive(e);                
 
                 runningReceiveTasks.TryAdd(receiveTask, receiveTask);
