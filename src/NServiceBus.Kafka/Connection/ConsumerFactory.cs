@@ -78,8 +78,8 @@ namespace NServiceBus.Transports.Kafka.Connection
             config["debug"] = "all";
             var defaultConfig = new TopicConfig();
             defaultConfig["auto.offset.reset"] = "earliest";
-            config["session.timeout.ms"]= "15000";  
-            config["heartbeat.interval.ms"] = "5000";
+            config["session.timeout.ms"]= "30000";  
+            config["heartbeat.interval.ms"] = "30000";
             config.DefaultTopicConfig = defaultConfig;
 
             if(consumer!=null)
