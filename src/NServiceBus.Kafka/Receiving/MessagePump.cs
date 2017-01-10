@@ -90,7 +90,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         private void Consumer_OnError(object sender, Handle.ErrorArgs e)
         {
             Logger.Error("Consumer_OnError: " + e.Reason);
-            consumer.Stop().Wait(30000);
+            ((EventConsumer)sender).Stop().Wait(30000);
             consumerFactory.ResetConsumer();
             consumer = consumerFactory.GetConsumer();
             consumer.OnError += Consumer_OnError;
