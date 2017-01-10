@@ -25,6 +25,8 @@ namespace NServiceBus.Transport.Kafka
         private static MessageWrapperSerializer serializer;
         static Object o = new Object();
         ConsumerFactory consumerFactory;
+        MessagePump  messagePump;
+        MessageDispatcher messageDispatcher;
 
         public KafkaTransportInfrastructure(SettingsHolder settings, string connectionString)
         {
@@ -32,18 +34,20 @@ namespace NServiceBus.Transport.Kafka
             this.connectionString = connectionString;
             serializer = BuildSerializer(settings);
             consumerFactory = new ConsumerFactory(connectionString, settings.EndpointName());
+            messagePump = new MessagePump(consumerFactory, settings.EndpointName());
+            messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
         }
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
-            return new TransportReceiveInfrastructure(() => new MessagePump(consumerFactory, settings.EndpointName()), 
+            return new TransportReceiveInfrastructure(() => messagePump, 
                 () => new QueueCreator(), 
                 () => Task.FromResult(StartupCheckResult.Success));
         }
 
         public override TransportSendInfrastructure ConfigureSendInfrastructure()
         {
-            return new TransportSendInfrastructure(() => new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString)), () => Task.FromResult(StartupCheckResult.Success));
+            return new TransportSendInfrastructure(() => messageDispatcher, () => Task.FromResult(StartupCheckResult.Success));
         }
 
 

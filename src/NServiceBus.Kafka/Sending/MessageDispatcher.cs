@@ -65,7 +65,7 @@ namespace NServiceBus.Kafka.Sending
             var messageStream = new MemoryStream();
             KafkaTransportInfrastructure.GetSerializer().Serialize(messageWrapper, messageStream);            
            
-            await topic.Produce(messageStream.ToArray());
+            await topic.Produce(messageStream.ToArray()).ConfigureAwait(false);
         }
 
         async Task PublishMessage(MulticastTransportOperation transportOperation)

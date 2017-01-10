@@ -27,7 +27,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(5);
 
         static ILog Logger = LogManager.GetLogger(typeof(MessagePump));
-        ConcurrentDictionary<Task, Task> runningReceiveTasks;
+        ConcurrentDictionary<Task, Task> runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
         static readonly TransportTransaction transportTranaction = new TransportTransaction();
         private PushSettings settings;
 
@@ -36,6 +36,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         int maxConcurrency;
         SemaphoreSlim semaphore;
         CancellationTokenSource messageProcessing;
+        bool started = false;
         
         // Stop
         TaskCompletionSource<bool> connectionShutdownCompleted;
@@ -61,7 +62,12 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
         public void Start(PushRuntimeSettings limitations)
         {
-            runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
+            if (started)
+                return;
+
+            started = true;
+
+            //runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
             messageProcessing = new CancellationTokenSource();
 
             maxConcurrency = limitations.MaxConcurrency;
@@ -77,6 +83,8 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
 
             consumerFactory.StartConsumer();
+
+            
         }
 
         private void Consumer_OnError(object sender, Handle.ErrorArgs e)
@@ -121,9 +129,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
             {
                 var message = await retrieved.UnWrap().ConfigureAwait(false);
 
-                await Process(message);
+                await Process(message).ConfigureAwait(false);
 
-                await consumer.Commit(retrieved);
+                await consumer.Commit(retrieved).ConfigureAwait(false);
             }
             
             catch (Exception ex)

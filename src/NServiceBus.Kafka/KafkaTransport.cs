@@ -29,6 +29,7 @@ namespace NServiceBus.Transport.Kafka
 
             // register the MessageWrapper as a system message to have it registered in mappings and serializers
             settings.GetOrCreate<Conventions>().AddSystemMessagesConventions(t => t == typeof(MessageWrapper));
+            settings.Set("Recoverability.DisableLegacyRetriesSatellite", true);
 
             // TODO: register metadata of the wrapper for the sake of XML serializer
             settings.Get<MessageMetadataRegistry>().GetMessageMetadata(typeof(MessageWrapper));

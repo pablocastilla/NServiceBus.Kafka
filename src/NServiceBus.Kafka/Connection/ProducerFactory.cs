@@ -31,8 +31,8 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         public Producer GetProducer()
         {
-            return new Producer(this.connectionString);
-            //return instance;
+            //return new Producer(this.connectionString);
+            return instance;
 
         }
     }
