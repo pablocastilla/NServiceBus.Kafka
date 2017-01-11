@@ -98,6 +98,11 @@ namespace NServiceBus.Transport.Kafka.Receiving
             consumerFactory.StartConsumer();
         }
 
+
+        ConcurrentDictionary<TopicPartitionOffset, bool> OffsetsReceived = new ConcurrentDictionary<TopicPartitionOffset, bool>();
+    
+        object o = new object();
+
         private void Consumer_OnMessage(object sender, Message e)
         {
             try
@@ -110,7 +115,44 @@ namespace NServiceBus.Transport.Kafka.Receiving
                 receiveTask.ContinueWith((t, state) =>
                 {                   
                     var receiveTasks = (ConcurrentDictionary<Task, Task>)state;
-                    
+
+                    OffsetsReceived.TryUpdate(e.TopicPartitionOffset, true, false);
+
+                    List<TopicPartitionOffset> offSetsToCommit = new List<TopicPartitionOffset>();
+
+                    var partitions = from offset in OffsetsReceived.Keys
+                                     group offset by new
+                                     {
+                                         offset.Topic,
+                                         offset.Partition
+                                     } into keys
+                                     select new 
+                                     {
+                                         offsetNames = keys.Key.Topic + keys.Key.Partition,
+                                         offsetValues = keys.ToList()
+                                     };
+
+                    foreach (var k in partitions)
+                    {
+                        var orderedOffsets = k.offsetValues.OrderBy(p => p.Offset);
+                        foreach (var o in orderedOffsets)
+                        {
+                            if (OffsetsReceived[o] != true)
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                offSetsToCommit.Add(o);
+                                bool aux;
+                                OffsetsReceived.TryRemove(o,out aux);
+                            }
+                        }
+                    }
+
+                    if(offSetsToCommit.Count>0)
+                        consumer.Commit(offSetsToCommit).ConfigureAwait(false);
+
                     Task toBeRemoved;
                     receiveTasks.TryRemove(t, out toBeRemoved);
                 }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously);
@@ -129,9 +171,10 @@ namespace NServiceBus.Transport.Kafka.Receiving
             {
                 var message = await retrieved.UnWrap().ConfigureAwait(false);
 
+                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, false, (a,b)=> false);
+
                 await Process(message).ConfigureAwait(false);
 
-                await consumer.Commit(retrieved).ConfigureAwait(false);
             }
             
             catch (Exception ex)

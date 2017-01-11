@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NServiceBus.Settings;
+using NServiceBus.Transports.Kafka.Administration;
 
 namespace NServiceBus.Transports.Kafka.Connection
 {
@@ -21,13 +23,14 @@ namespace NServiceBus.Transports.Kafka.Connection
         static Object o = new Object();
 
         public bool ConsumerStarted { get; set; }
+                      
 
-
-        public ConsumerFactory(string connectionString, string endpointName)
+        public ConsumerFactory(string connectionString, string endpointName, SettingsHolder settings) 
         {
+            this.settings = settings;
             this.connectionString = connectionString;
             this.endpointName = endpointName;
-         
+
             if (consumer == null)
             {
                 lock (o)
@@ -75,11 +78,27 @@ namespace NServiceBus.Transports.Kafka.Connection
         private void CreateConsumer(List<string> topics = null)
         {
             var config = new RdKafka.Config() { GroupId = endpointName, EnableAutoCommit = false };
-            config["debug"] = "all";
+
+            bool debugEnabled;
+            if(settings.TryGet<bool>(WellKnownConfigurationKeys.KafkaDebugEnabled,out debugEnabled) && debugEnabled)
+                config["debug"] = "all";
+
             var defaultConfig = new TopicConfig();
             defaultConfig["auto.offset.reset"] = "earliest";
-            config["session.timeout.ms"]= "30000";  
-            config["heartbeat.interval.ms"] = "30000";
+
+            string sessionTimeout;
+            if (settings.TryGet<string>(WellKnownConfigurationKeys.KafkaSessionTimeout, out sessionTimeout) )
+                config["session.timeout.ms"] = sessionTimeout;
+            else
+                config["session.timeout.ms"] = "30000";
+
+
+            string heartBeatInterval;
+            if (settings.TryGet<string>(WellKnownConfigurationKeys.KafkaHeartBeatInterval, out heartBeatInterval))                
+                config["heartbeat.interval.ms"] = heartBeatInterval;
+            else
+                config["heartbeat.interval.ms"] = "1000";
+
             config.DefaultTopicConfig = defaultConfig;
 
             if(consumer!=null)
@@ -157,6 +176,7 @@ namespace NServiceBus.Transports.Kafka.Connection
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
         private bool disposing = false;
+        private SettingsHolder settings;
 
         protected virtual void Dispose(bool disposing)
         {

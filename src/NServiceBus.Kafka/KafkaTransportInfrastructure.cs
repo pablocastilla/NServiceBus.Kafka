@@ -33,7 +33,7 @@ namespace NServiceBus.Transport.Kafka
             this.settings = settings;
             this.connectionString = connectionString;
             serializer = BuildSerializer(settings);
-            consumerFactory = new ConsumerFactory(connectionString, settings.EndpointName());
+            consumerFactory = new ConsumerFactory(connectionString, settings.EndpointName(),settings);
             messagePump = new MessagePump(consumerFactory, settings.EndpointName());
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
         }
@@ -41,7 +41,7 @@ namespace NServiceBus.Transport.Kafka
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
             return new TransportReceiveInfrastructure(() => messagePump, 
-                () => new QueueCreator(), 
+                () => new QueueCreator(settings), 
                 () => Task.FromResult(StartupCheckResult.Success));
         }
 

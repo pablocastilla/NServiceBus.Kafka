@@ -91,7 +91,7 @@ namespace NServiceBus.Transports.Kafka.Administration
             }
 
             consumer.AddSubscriptionsBlocking(subscriptionList);
-           
+            consumer.CommitSubscriptionsBlocking();
         }
 
        
