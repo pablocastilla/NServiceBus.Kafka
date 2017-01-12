@@ -90,12 +90,12 @@ namespace NServiceBus.Transport.Kafka.Receiving
         private void Consumer_OnError(object sender, Handle.ErrorArgs e)
         {
             Logger.Error("Consumer_OnError: " + e.Reason);
-            ((EventConsumer)sender).Stop().Wait(30000);
+            /*((EventConsumer)sender).Stop().Wait(30000);
             consumerFactory.ResetConsumer();
             consumer = consumerFactory.GetConsumer();
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
-            consumerFactory.StartConsumer();
+            consumerFactory.StartConsumer();*/
         }
 
 
@@ -107,7 +107,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         {
             try
             {
-                Logger.Info($"message consumed"); 
+                Logger.Debug($"message consumed"); 
                 var receiveTask = InnerReceive(e);                
 
                 runningReceiveTasks.TryAdd(receiveTask, receiveTask);
@@ -179,7 +179,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
             
             catch (Exception ex)
             {
-                Logger.Warn("Kafka transport failed pushing a message through pipeline", ex);
+                Logger.Error("Kafka transport failed pushing a message through pipeline", ex);
             }
             finally
             {
@@ -260,7 +260,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         public async Task Stop()
         {
             
-            Logger.Info($"consumer.OnMessage -= Consumer_OnMessage");
+            Logger.Debug($"consumer.OnMessage -= Consumer_OnMessage");
 
             consumer.OnError -= Consumer_OnError;
             consumer.OnMessage -= Consumer_OnMessage;

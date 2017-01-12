@@ -39,7 +39,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 }
 
-                Logger.Info("Subscriptions:" + string.Join(", ", subscriptionList));
+                Logger.Debug("Subscriptions:" + string.Join(", ", subscriptionList));
 
                 
 
@@ -60,7 +60,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                 else
                     subscriptionList = subscriptionDictionary[consumer.Name];
 
-                Logger.Info("Subscriptions committed:" + string.Join(", ", subscriptionList));
+                Logger.Debug("Subscriptions committed:" + string.Join(", ", subscriptionList));
 
                 consumer.Subscribe(subscriptionList);
 

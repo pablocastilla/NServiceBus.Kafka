@@ -127,7 +127,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         private void Consumer_OnPartitionsAssigned(object sender, List<TopicPartitionOffset> e)
         {
-            Logger.Info($"Assigned partitions: [{string.Join(", ", e)}], member id: {((EventConsumer)sender).MemberId}");
+            Logger.Debug($"Assigned partitions: [{string.Join(", ", e)}], member id: {((EventConsumer)sender).MemberId}");
 
             if (e.Count == 0 || disposing)
                 return;
@@ -155,7 +155,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             if (disposing || disposedValue)
                 return;
 
-            Logger.Info($"Revoked partitions: [{string.Join(", ", partitions)}]");
+            Logger.Debug($"Revoked partitions: [{string.Join(", ", partitions)}]");
             foreach (var p in partitions)
                 assigments.Remove(p.Topic + p.Partition);
 
@@ -167,7 +167,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         private void Consumer_OnEndReached(object sender, TopicPartitionOffset e)
         {
-            Logger.Info("EndReached:" + e);
+            Logger.Debug("EndReached:" + e);
         }
 
 
@@ -189,7 +189,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                     // TODO: dispose managed state (managed objects).
                     if (consumer != null)
                     {
-                        Logger.Info("Disposing " + consumer.Name);
+                        Logger.Debug("Disposing " + consumer.Name);
 
                         consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
                         consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;

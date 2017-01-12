@@ -57,7 +57,7 @@ namespace NServiceBus.Kafka.Sending
 
         async Task SendMessage(UnicastTransportOperation transportOperation)
         {
-            Logger.Info("Send to "+ transportOperation.Destination);
+            Logger.Debug("Send to "+ transportOperation.Destination);
             var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue, transportOperation.Destination);
 
             var topic = producerFactory.GetProducer().Topic(transportOperation.Destination);
@@ -80,7 +80,7 @@ namespace NServiceBus.Kafka.Sending
 
             foreach (var t in topicsToSendTo)
             {
-                Logger.Info("Publish to " + t);
+                Logger.Debug("Publish to " + t);
                 var topic = producerFactory.GetProducer().Topic(t);                              
 
                 await topic.Produce(messageStream.ToArray()).ContinueWith(result => Logger.Info("new partition and offset: "+result.Result.Partition+" "+result.Result.Offset));
