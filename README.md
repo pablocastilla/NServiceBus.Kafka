@@ -3,16 +3,16 @@ https://pablocastilla.wordpress.com/2017/01/03/my-proposal-for-joining-net-and-t
 
 Example of configuring the consumer:
 
-  endpointConfiguration.DisableFeature<TimeoutManager>();
-
+            endpointConfiguration.DisableFeature<TimeoutManager>();
             endpointConfiguration.UseTransport<KafkaTransport>().ConnectionString("127.0.0.1:9092");
-           
+ 
             var recoverability = endpointConfiguration.Recoverability();
             recoverability.Delayed(
                 delayed =>
                 {
                     delayed.NumberOfRetries(0);
                 });
+                
                 
 Example of configuring the sender:
 
