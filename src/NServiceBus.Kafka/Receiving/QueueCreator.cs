@@ -34,7 +34,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
             string replicationFactor;
             if (!settings.TryGet<string>(WellKnownConfigurationKeys.ReplicationFactor, out replicationFactor))
-                replicationFactor = "3";
+                replicationFactor = "1";
 
             var process = new System.Diagnostics.Process();
 

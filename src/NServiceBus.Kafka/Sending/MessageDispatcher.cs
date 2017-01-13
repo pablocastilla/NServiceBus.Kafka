@@ -58,7 +58,25 @@ namespace NServiceBus.Kafka.Sending
         async Task SendMessage(UnicastTransportOperation transportOperation)
         {
             Logger.Debug("Send to "+ transportOperation.Destination);
-            var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue, transportOperation.Destination);
+
+            var toBeReceived = transportOperation.GetTimeToBeReceived();
+            var timeToBeReceived = toBeReceived.HasValue && toBeReceived.Value < TimeSpan.MaxValue ? toBeReceived : null;
+
+            if (timeToBeReceived != null && timeToBeReceived.Value == TimeSpan.Zero)
+            {
+                var messageType = transportOperation.Message.Headers[Headers.EnclosedMessageTypes].Split(',').First();
+                Logger.WarnFormat("TimeToBeReceived is set to zero for message of type '{0}'. Cannot send operation.", messageType);
+                return;
+            }           
+
+            // TimeToBeReceived was not specified on message - go for maximum set by SDK
+            if (timeToBeReceived == TimeSpan.MaxValue)
+            {
+                timeToBeReceived = null;
+            }
+
+
+            var messageWrapper = BuildMessageWrapper(transportOperation, toBeReceived, transportOperation.Destination);
 
             var topic = producerFactory.GetProducer().Topic(transportOperation.Destination);
 
@@ -66,6 +84,7 @@ namespace NServiceBus.Kafka.Sending
             KafkaTransportInfrastructure.GetSerializer().Serialize(messageWrapper, messageStream);            
            
             await topic.Produce(messageStream.ToArray()).ConfigureAwait(false);
+            
         }
 
         async Task PublishMessage(MulticastTransportOperation transportOperation)

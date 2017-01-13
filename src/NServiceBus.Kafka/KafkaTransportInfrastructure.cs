@@ -51,13 +51,7 @@ namespace NServiceBus.Transport.Kafka
         }
 
 
-        public override IEnumerable<Type> DeliveryConstraints
-        {
-            get
-            {
-                yield return typeof(DiscardIfNotReceivedBefore);
-            }
-        }
+        public override IEnumerable<Type> DeliveryConstraints => new[] { typeof(DiscardIfNotReceivedBefore) };
 
         public override OutboundRoutingPolicy OutboundRoutingPolicy
         {

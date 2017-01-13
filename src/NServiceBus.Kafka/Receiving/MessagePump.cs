@@ -78,7 +78,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
 
-            consumer.AddSubscriptionsBlocking(new List<string>() { endpointName } );
+            consumer.AddSubscriptionsBlocking(new List<string>() { endpointName, endpointName+".Timeouts", endpointName+".TimeoutsDispatcher" } );
             consumer.CommitSubscriptionsBlocking();
 
 
