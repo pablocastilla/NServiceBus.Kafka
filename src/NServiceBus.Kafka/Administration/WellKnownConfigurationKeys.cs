@@ -17,6 +17,7 @@ namespace NServiceBus.Transports.Kafka.Administration
         public const string KafkaZooKeeperUrl = "Transport.Kafka.ZooKeeperUrl";
         public const string NumberOfPartitions = "Transport.Kafka.NumberOfPartitions";
         public const string ReplicationFactor = "Transport.Kafka.ReplicationFactor";
+        public const string CreateQueues = "Transport.Kafka.CreateQueues";
 
 
     }
