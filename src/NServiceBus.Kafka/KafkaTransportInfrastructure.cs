@@ -24,7 +24,7 @@ namespace NServiceBus.Transport.Kafka
         readonly string connectionString;
         private static MessageWrapperSerializer serializer;
         static Object o = new Object();
-        ConsumerFactory consumerFactory;
+        
         MessagePump  messagePump;
         MessageDispatcher messageDispatcher;
 
@@ -80,7 +80,7 @@ namespace NServiceBus.Transport.Kafka
       
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
-            return new TransportSubscriptionInfrastructure(() => new SubscriptionManager(consumerFactory));
+            return new TransportSubscriptionInfrastructure(() => new SubscriptionManager(messagePump));
         }
 
         public override string ToTransportAddress(LogicalAddress logicalAddress)
@@ -139,7 +139,7 @@ namespace NServiceBus.Transport.Kafka
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects).
-                    consumerFactory.Dispose();
+                    
                 }
 
              

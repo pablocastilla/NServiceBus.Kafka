@@ -8,16 +8,17 @@ using NServiceBus.Extensibility;
 using NServiceBus.Transports.Kafka.Connection;
 using RdKafka;
 using System.Collections.Concurrent;
+using NServiceBus.Transport.Kafka.Receiving;
 
 namespace NServiceBus.Transports.Kafka.Administration
 {
     class SubscriptionManager : IManageSubscriptions
     {
-        private readonly ConsumerFactory consumerFactory;
+        private readonly MessagePump messagePump;
 
-        public SubscriptionManager(ConsumerFactory consumerFactory)
+        public SubscriptionManager(MessagePump messagePump)
         {
-            this.consumerFactory = consumerFactory;
+            this.messagePump = messagePump;
         }
 
         public Task Subscribe(Type eventType, ContextBag context)
@@ -31,7 +32,7 @@ namespace NServiceBus.Transports.Kafka.Administration
 
         public Task Unsubscribe(Type eventType, ContextBag context)
         {
-            var consumer = consumerFactory.GetConsumer();
+            //var consumer = consumerFactory.GetConsumer();
 
            // consumer.Unsubscribe();
 
@@ -78,7 +79,7 @@ namespace NServiceBus.Transports.Kafka.Administration
             if (finalTopics.Count() == 0)
                 return;
 
-            var consumer = consumerFactory.GetConsumer();
+            var consumer = messagePump.getMainConsumer();
             var subscriptionList = consumer.Subscription;
 
             foreach (var exchangeName in finalTopics)

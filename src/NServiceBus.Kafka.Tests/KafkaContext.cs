@@ -36,16 +36,16 @@ namespace NServiceBus.Transport.Kafka.Tests
 
             settingsHolder.Set("NServiceBus.Routing.EndpointName", endpointName);
 
-             var kafkaTransport = new KafkaTransport();
+            var kafkaTransport = new KafkaTransport();
             var infra = kafkaTransport.Initialize(settingsHolder, connectionString);
 
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
 
-            var consumerFactory = new Transports.Kafka.Connection.ConsumerFactory(connectionString, endpointName, settingsHolder);
+         
             messagePump = new MessagePump(endpointName, settingsHolder, connectionString);
            
 
-            subscriptionManager = new SubscriptionManager(consumerFactory);
+            subscriptionManager = new SubscriptionManager(messagePump);
 
             foreach (var t in typesToSubscribeTo)
             {
