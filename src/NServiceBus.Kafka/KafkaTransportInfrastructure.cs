@@ -33,8 +33,8 @@ namespace NServiceBus.Transport.Kafka
             this.settings = settings;
             this.connectionString = connectionString;
             serializer = BuildSerializer(settings);
-            consumerFactory = new ConsumerFactory(connectionString, settings.EndpointName(),settings);
-            messagePump = new MessagePump(consumerFactory, settings.EndpointName());
+            
+            messagePump = new MessagePump(settings.EndpointName(), settings,connectionString);
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
         }
 

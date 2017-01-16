@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using NServiceBus.Transports.Kafka.Wrapper;
 using NServiceBus;
 using NServiceBus.Extensibility;
-
+using NServiceBus.Settings;
 
 namespace NServiceBus.Transport.Kafka.Receiving
 {
@@ -30,21 +30,25 @@ namespace NServiceBus.Transport.Kafka.Receiving
         ConcurrentDictionary<Task, Task> runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
         static readonly TransportTransaction transportTranaction = new TransportTransaction();
         private PushSettings settings;
+        private SettingsHolder settingsHolder;
 
 
         // Start
         int maxConcurrency;
         SemaphoreSlim semaphore;
         CancellationTokenSource messageProcessing;
-        bool started = false;
+
+       
         
         // Stop
         TaskCompletionSource<bool> connectionShutdownCompleted;
 
-        public MessagePump(ConsumerFactory consumerFactory,  string endpointName)
+        public MessagePump( string endpointName,SettingsHolder settingsHolder,string connectionString)
         {
-            this.consumerFactory = consumerFactory;            
+            
             this.endpointName = endpointName;
+            this.settingsHolder = settingsHolder;
+            this.connectionString = connectionString;
         }
 
         public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
@@ -53,36 +57,35 @@ namespace NServiceBus.Transport.Kafka.Receiving
             this.onError = onError;
             this.settings = settings;
 
+            this.endpointName = settings.InputQueue;
+            this.consumerFactory =  new ConsumerFactory(connectionString, settings.InputQueue, settingsHolder);
             //TODO: circuit breaker?
             //circuitBreaker = new MessagePumpConnectionFailedCircuitBreaker($"'{settings.InputQueue} MessagePump'", timeToWaitBeforeTriggeringCircuitBreaker, criticalError);
-
-
-            return Task.FromResult(0);
-        }
-
-        public void Start(PushRuntimeSettings limitations)
-        {
-            if (started)
-                return;
-
-            started = true;
-
-            //runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
-            messageProcessing = new CancellationTokenSource();
-
-            maxConcurrency = limitations.MaxConcurrency;
-            semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
 
             consumer = consumerFactory.GetConsumer();
 
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
 
-            consumer.AddSubscriptionsBlocking(new List<string>() { endpointName, endpointName+".Timeouts", endpointName+".TimeoutsDispatcher" } );
+            consumer.AddSubscriptionsBlocking(new List<string>() { endpointName });
             consumer.CommitSubscriptionsBlocking();
 
 
             consumerFactory.StartConsumer();
+
+            return Task.FromResult(0);
+        }
+
+        public void Start(PushRuntimeSettings limitations)
+        {
+          
+            //runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
+            messageProcessing = new CancellationTokenSource();
+
+            maxConcurrency = limitations.MaxConcurrency;
+            semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
+
+         
 
             
         }
@@ -102,6 +105,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         ConcurrentDictionary<TopicPartitionOffset, bool> OffsetsReceived = new ConcurrentDictionary<TopicPartitionOffset, bool>();
     
         object o = new object();
+        private string connectionString;
 
         private void Consumer_OnMessage(object sender, Message e)
         {

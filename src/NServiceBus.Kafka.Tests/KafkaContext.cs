@@ -42,7 +42,7 @@ namespace NServiceBus.Transport.Kafka.Tests
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
 
             var consumerFactory = new Transports.Kafka.Connection.ConsumerFactory(connectionString, endpointName, settingsHolder);
-            messagePump = new MessagePump(consumerFactory, endpointName);
+            messagePump = new MessagePump(endpointName, settingsHolder, connectionString);
            
 
             subscriptionManager = new SubscriptionManager(consumerFactory);
