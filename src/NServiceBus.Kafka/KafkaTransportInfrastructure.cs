@@ -18,29 +18,25 @@ namespace NServiceBus.Transport.Kafka
 {
 
 
-    class KafkaTransportInfrastructure : TransportInfrastructure, IDisposable
+    class KafkaTransportInfrastructure : TransportInfrastructure
     {
         readonly SettingsHolder settings;
-        readonly string connectionString;
         private static MessageWrapperSerializer serializer;
         static Object o = new Object();
         ConsumerFactory consumerFactory;
-        MessagePump  messagePump;
         MessageDispatcher messageDispatcher;
 
         public KafkaTransportInfrastructure(SettingsHolder settings, string connectionString)
         {
             this.settings = settings;
-            this.connectionString = connectionString;
             serializer = BuildSerializer(settings);
             consumerFactory = new ConsumerFactory(connectionString, settings.EndpointName(),settings);
-            messagePump = new MessagePump(consumerFactory, settings.EndpointName());
-            messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
+            messageDispatcher = new MessageDispatcher(new ProducerFactory(connectionString));
         }
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
-            return new TransportReceiveInfrastructure(() => messagePump, 
+            return new TransportReceiveInfrastructure(() => new MessagePump(consumerFactory), 
                 () => new QueueCreator(settings), 
                 () => Task.FromResult(StartupCheckResult.Success));
         }
@@ -127,35 +123,5 @@ namespace NServiceBus.Transport.Kafka
         {
             return serializer;
         }
-
-        #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
-       
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects).
-                    consumerFactory.Dispose();
-                }
-
-             
-
-                disposedValue = true;
-            }
-        }
-
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
-        }
-        #endregion
     }
 }

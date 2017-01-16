@@ -28,8 +28,6 @@ namespace NServiceBus.Kafka.Sending
 
         public async Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
         {
-           
-
             try
             {
                 var unicastTransportOperations = outgoingMessages.UnicastTransportOperations;

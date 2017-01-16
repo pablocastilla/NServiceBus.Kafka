@@ -27,7 +27,6 @@ namespace NServiceBus.Transport.Kafka.Tests
         
         public void SetUp (params Type[] typesToSubscribeTo)
         {
-           
             receivedMessages = new BlockingCollection<IncomingMessage>();
 
             Environment.SetEnvironmentVariable("KafkaTransport.ConnectionString", "127.0.0.1:9092");
@@ -39,10 +38,10 @@ namespace NServiceBus.Transport.Kafka.Tests
              var kafkaTransport = new KafkaTransport();
             var infra = kafkaTransport.Initialize(settingsHolder, connectionString);
 
-            messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
+            messageDispatcher = new MessageDispatcher(new ProducerFactory(connectionString));
 
-            var consumerFactory = new Transports.Kafka.Connection.ConsumerFactory(connectionString, endpointName, settingsHolder);
-            messagePump = new MessagePump(consumerFactory, endpointName);
+            var consumerFactory = new ConsumerFactory(connectionString, endpointName, settingsHolder);
+            messagePump = new MessagePump(consumerFactory);
            
 
             subscriptionManager = new SubscriptionManager(consumerFactory);

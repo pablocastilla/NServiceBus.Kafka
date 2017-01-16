@@ -31,7 +31,7 @@ namespace NServiceBus.Transports.Kafka.Administration
 
         public Task Unsubscribe(Type eventType, ContextBag context)
         {
-            var consumer = consumerFactory.GetConsumer();
+            var consumer = consumerFactory.CreateConsumer();
 
            // consumer.Unsubscribe();
 
@@ -78,7 +78,7 @@ namespace NServiceBus.Transports.Kafka.Administration
             if (finalTopics.Count() == 0)
                 return;
 
-            var consumer = consumerFactory.GetConsumer();
+            var consumer = consumerFactory.CreateConsumer();
             var subscriptionList = consumer.Subscription;
 
             foreach (var exchangeName in finalTopics)

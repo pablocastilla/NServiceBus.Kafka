@@ -21,15 +21,6 @@ public class ConfigureEndpointKafkaTransport : IConfigureEndpointTestExecution
 {
     DbConnectionStringBuilder connectionStringBuilder;
 
-
-    static void ApplyDefault(DbConnectionStringBuilder builder, string key, string value)
-    {
-        if (!builder.ContainsKey(key))
-        {
-            builder.Add(key, value);
-        }
-    }
-
     public Task Configure(string endpointName, EndpointConfiguration configuration, RunSettings settings, PublisherMetadata publisherMetadata)
     {          
         configuration.UseTransport<KafkaTransport>().ConnectionString(Environment.GetEnvironmentVariable("KafkaTransport.ConnectionString") ?? "127.0.0.1:9092");

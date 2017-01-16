@@ -1,35 +1,32 @@
 ﻿using NServiceBus.Logging;
-using NServiceBus.Transport;
 using NServiceBus.Transports.Kafka.Connection;
 using RdKafka;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NServiceBus.Transports.Kafka.Wrapper;
-using NServiceBus;
 using NServiceBus.Extensibility;
 
 
 namespace NServiceBus.Transport.Kafka.Receiving
 {
 
-    class MessagePump : IPushMessages, IDisposable
+    class MessagePump : IPushMessages
     {
         Func<MessageContext, Task> onMessage;
         Func<ErrorContext, Task<ErrorHandleResult>> onError;
         ConsumerFactory consumerFactory;
         EventConsumer consumer;
-        string endpointName;
         static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(5);
 
         static ILog Logger = LogManager.GetLogger(typeof(MessagePump));
         ConcurrentDictionary<Task, Task> runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
         static readonly TransportTransaction transportTranaction = new TransportTransaction();
         private PushSettings settings;
+        Dictionary<string, TopicPartitionOffset> assigments = new Dictionary<string, TopicPartitionOffset>();
 
 
         // Start
@@ -41,10 +38,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
         // Stop
         TaskCompletionSource<bool> connectionShutdownCompleted;
 
-        public MessagePump(ConsumerFactory consumerFactory,  string endpointName)
+        public MessagePump(ConsumerFactory consumerFactory)
         {
             this.consumerFactory = consumerFactory;            
-            this.endpointName = endpointName;
         }
 
         public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
@@ -62,29 +58,24 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
         public void Start(PushRuntimeSettings limitations)
         {
-            if (started)
-                return;
-
-            started = true;
-
-            //runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
+            runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
             messageProcessing = new CancellationTokenSource();
 
             maxConcurrency = limitations.MaxConcurrency;
             semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
 
-            consumer = consumerFactory.GetConsumer();
+            consumer = consumerFactory.CreateConsumer();
 
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
+            consumer.OnPartitionsAssigned += Consumer_OnPartitionsAssigned;
+            consumer.OnPartitionsRevoked += Consumer_OnPartitionsRevoked;
+            consumer.OnEndReached += Consumer_OnEndReached;
 
-            consumer.AddSubscriptionsBlocking(new List<string>() { endpointName, endpointName+".Timeouts", endpointName+".TimeoutsDispatcher" } );
+            consumer.AddSubscriptionsBlocking(new List<string> { settings.InputQueue });
             consumer.CommitSubscriptionsBlocking();
 
-
-            consumerFactory.StartConsumer();
-
-            
+            consumer.Start();
         }
 
         private void Consumer_OnError(object sender, Handle.ErrorArgs e)
@@ -92,17 +83,53 @@ namespace NServiceBus.Transport.Kafka.Receiving
             Logger.Error("Consumer_OnError: " + e.Reason);
             /*((EventConsumer)sender).Stop().Wait(30000);
             consumerFactory.ResetConsumer();
-            consumer = consumerFactory.GetConsumer();
+            consumer = consumerFactory.CreateConsumer();
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
             consumerFactory.StartConsumer();*/
         }
 
+        private void Consumer_OnPartitionsAssigned(object sender, List<TopicPartitionOffset> e)
+        {
+            Logger.Debug($"Assigned partitions: [{string.Join(", ", e)}], member id: {((EventConsumer)sender).MemberId}");
+
+            if (e.Count == 0)
+                return;
+
+            //TODO: circuit breaker ok
+
+            foreach (var partition in e)
+            {
+                var partitionName = partition.Topic + partition.Partition;
+
+                if (!assigments.ContainsKey(partitionName))
+                    assigments.Add(partitionName, partition);
+                else
+                    assigments[partitionName] = partition;
+
+            }
+
+            var partititionsToAssign = assigments.Values.Select(p => p).ToList();
+            ((EventConsumer)sender).Assign(partititionsToAssign);
+        }
+
+
+        private void Consumer_OnPartitionsRevoked(object sender, List<TopicPartitionOffset> partitions)
+        {
+            Logger.Debug($"Revoked partitions: [{string.Join(", ", partitions)}]");
+            foreach (var p in partitions)
+                assigments.Remove(p.Topic + p.Partition);
+
+            ((EventConsumer)sender).Unassign();
+        }
+
+        private void Consumer_OnEndReached(object sender, TopicPartitionOffset e)
+        {
+            Logger.Debug("EndReached:" + e);
+        }
 
         ConcurrentDictionary<TopicPartitionOffset, bool> OffsetsReceived = new ConcurrentDictionary<TopicPartitionOffset, bool>();
     
-        object o = new object();
-
         private void Consumer_OnMessage(object sender, Message e)
         {
             try
@@ -264,7 +291,13 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
             consumer.OnError -= Consumer_OnError;
             consumer.OnMessage -= Consumer_OnMessage;
+            consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
+            consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
+            consumer.OnEndReached -= Consumer_OnEndReached;
             messageProcessing.Cancel();
+
+            await consumer.Stop().ConfigureAwait(false);
+
             // ReSharper disable once MethodSupportsCancellation
             var timeoutTask = Task.Delay(StoppingAllTasksTimeout);
             var allTasks = runningReceiveTasks.Values;
@@ -279,12 +312,6 @@ namespace NServiceBus.Transport.Kafka.Receiving
             runningReceiveTasks.Clear();
 
            
-        }
-
-
-        public void Dispose()
-        {
-            //consumerFactory.Dispose();
         }
     }
 }
