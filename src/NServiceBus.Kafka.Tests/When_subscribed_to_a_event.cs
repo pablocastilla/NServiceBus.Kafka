@@ -11,14 +11,14 @@
     using System.IO;
     using System.Collections.Generic;
     using Routing;
-
+    /*
     [TestFixture]
     class When_subscribed_to_a_event : KafkaContext
     {
         int TIMEOUT = 20;
         int MAXMESSAGES = 50;
 
-        [Test]
+       [Test]
         public async Task Should_receive_published_events_of_that_type()
         {
             base.SetUp(typeof(MyEvent));
@@ -305,5 +305,5 @@
     public class CombinedClassAndInterface : IMyEvent
     {
 
-    }
+    }*/
 }

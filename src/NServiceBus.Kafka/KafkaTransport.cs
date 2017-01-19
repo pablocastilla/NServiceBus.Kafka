@@ -12,6 +12,7 @@ using NServiceBus.Serialization;
 using NServiceBus.MessageInterfaces;
 using System.Reflection;
 using NServiceBus.Transports.Kafka.Administration;
+using System.Globalization;
 
 namespace NServiceBus.Transport.Kafka
 {
@@ -24,6 +25,7 @@ namespace NServiceBus.Transport.Kafka
 
         public override TransportInfrastructure Initialize(SettingsHolder settings, string connectionString)
         {
+
             // configure JSON instead of XML as the default serializer:
             SetMainSerializer(settings, new JsonSerializer());
 
@@ -32,6 +34,15 @@ namespace NServiceBus.Transport.Kafka
             settings.Set("Recoverability.DisableLegacyRetriesSatellite", true);
 
             // TODO: register metadata of the wrapper for the sake of XML serializer
+            MessageMetadataRegistry registry;
+            if (settings.TryGet(out registry) == false)
+            {
+                const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.CreateInstance;
+
+                registry = (MessageMetadataRegistry)Activator.CreateInstance(typeof(MessageMetadataRegistry), flags, null, new object[] { settings.GetOrCreate<Conventions>() }, CultureInfo.InvariantCulture);
+                settings.Set<MessageMetadataRegistry>(registry);
+            }
+
             settings.Get<MessageMetadataRegistry>().GetMessageMetadata(typeof(MessageWrapper));
 
             settings.SetDefault(WellKnownConfigurationKeys.ConnectionString, connectionString);    

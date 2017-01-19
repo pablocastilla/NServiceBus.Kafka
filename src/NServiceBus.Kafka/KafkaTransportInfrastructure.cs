@@ -27,13 +27,15 @@ namespace NServiceBus.Transport.Kafka
         
         MessagePump  messagePump;
         MessageDispatcher messageDispatcher;
+        QueueCreator queueCreator;
 
         public KafkaTransportInfrastructure(SettingsHolder settings, string connectionString)
         {
             this.settings = settings;
             this.connectionString = connectionString;
             serializer = BuildSerializer(settings);
-            
+            this.queueCreator = new QueueCreator(settings);
+
             messagePump = new MessagePump(settings.EndpointName(), settings,connectionString);
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
         }
@@ -41,7 +43,7 @@ namespace NServiceBus.Transport.Kafka
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
         {
             return new TransportReceiveInfrastructure(() => messagePump, 
-                () => new QueueCreator(settings), 
+                () => queueCreator, 
                 () => Task.FromResult(StartupCheckResult.Success));
         }
 
@@ -80,7 +82,7 @@ namespace NServiceBus.Transport.Kafka
       
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
-            return new TransportSubscriptionInfrastructure(() => new SubscriptionManager(messagePump));
+            return new TransportSubscriptionInfrastructure(() => new SubscriptionManager(messagePump, queueCreator));
         }
 
         public override string ToTransportAddress(LogicalAddress logicalAddress)
@@ -139,6 +141,7 @@ namespace NServiceBus.Transport.Kafka
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects).
+                    messagePump.Dispose();
                     
                 }
 

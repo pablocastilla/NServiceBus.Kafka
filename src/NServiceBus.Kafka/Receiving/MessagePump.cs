@@ -23,7 +23,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         List<ConsumerHolder> consumerHolderList = new List<ConsumerHolder>();
        
       
-        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(5);
+        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
 
         static ILog Logger = LogManager.GetLogger(typeof(MessagePump));
        
@@ -81,7 +81,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
             maxConcurrency = limitations.MaxConcurrency;
             semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
 
-            consumerHolderList.ForEach(ch => ch.Init());
+            System.Threading.Thread.Sleep(5000);
+
+            consumerHolderList.ForEach(ch => ch.Start(messageProcessing));
             
 
         }
@@ -96,23 +98,25 @@ namespace NServiceBus.Transport.Kafka.Receiving
             messageProcessing.Cancel();
             // ReSharper disable once MethodSupportsCancellation
             var timeoutTask = Task.Delay(StoppingAllTasksTimeout);
-           
-            //var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
 
-           /* if (finishedTask.Equals(timeoutTask))
-            {
-                Logger.Error("The message pump failed to stop with in the time allowed(30s)");
-            }*/
+            /*  var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
 
-            
-          
-           
+               if (finishedTask.Equals(timeoutTask))
+               {
+                   Logger.Error("The message pump failed to stop with in the time allowed(30s)");
+               }*/
+
+            foreach (var ch in consumerHolderList)
+                await ch.Stop();
+
+
+
         }
 
 
         public void Dispose()
         {
-            //consumerFactory.Dispose();
+            consumerHolderList.ForEach(ch => ch.Dispose());
         }
     }
 }

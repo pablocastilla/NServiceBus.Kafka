@@ -34,6 +34,9 @@ namespace NServiceBus.Transports.Kafka.Connection
         private Func<MessageContext, Task> onMessage;
         private Func<ErrorContext, Task<ErrorHandleResult>> onError;
         readonly TransportTransaction transportTransaction = new TransportTransaction();
+        Task timer;
+        CancellationTokenSource tokenSource;
+      
 
 
         public ConsumerHolder(string connectionString, string endpointName, PushSettings settings, SettingsHolder settingsHolder, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError) 
@@ -59,8 +62,10 @@ namespace NServiceBus.Transports.Kafka.Connection
             }
         }
 
-        public void Init()
-        {           
+        public void Start(CancellationTokenSource tokenSource)
+        {
+            this.tokenSource = tokenSource;
+            timer = Task.Run(TimerLoop);
 
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
@@ -73,11 +78,42 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         }
 
-        public void Stop()
+        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
+        public async Task Stop()
         {
             consumer.OnError -= Consumer_OnError;
             consumer.OnMessage -= Consumer_OnMessage;
 
+            var timeoutTask = Task.Delay(StoppingAllTasksTimeout);
+            var allTasks = runningReceiveTasks.Values;
+            var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
+
+           
+            
+            if (finishedTask.Equals(timeoutTask))
+            {
+                Logger.Error("The message pump failed to stop with in the time allowed(30s)");
+            }
+
+           
+        }
+
+        async Task TimerLoop()
+        {
+            var token = tokenSource.Token;
+            while (!tokenSource.IsCancellationRequested)
+            {
+                try
+                {
+                    
+                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,5), token)).ConfigureAwait(false);                    
+                    await CommitOffsets().ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    // intentionally ignored
+                }
+            }
         }
 
         public EventConsumer GetConsumer()
@@ -180,49 +216,13 @@ namespace NServiceBus.Transports.Kafka.Connection
             {
                 Logger.Debug($"message consumed");
                 var receiveTask = InnerReceive(e);
-
+                
                 runningReceiveTasks.TryAdd(receiveTask, receiveTask);
 
                 receiveTask.ContinueWith((t, state) =>
                 {
                     var receiveTasks = (ConcurrentDictionary<Task, Task>)state;
-
-                    OffsetsReceived.TryUpdate(e.TopicPartitionOffset, true, false);
-
-                    List<TopicPartitionOffset> offSetsToCommit = new List<TopicPartitionOffset>();
-
-                    var partitions = from offset in OffsetsReceived.Keys
-                                     group offset by new
-                                     {
-                                         offset.Topic,
-                                         offset.Partition
-                                     } into keys
-                                     select new
-                                     {
-                                         offsetNames = keys.Key.Topic + keys.Key.Partition,
-                                         offsetValues = keys.ToList()
-                                     };
-
-                    foreach (var k in partitions)
-                    {
-                        var orderedOffsets = k.offsetValues.OrderBy(p => p.Offset);
-                        foreach (var o in orderedOffsets)
-                        {
-                            if (OffsetsReceived[o] != true)
-                            {
-                                break;
-                            }
-                            else
-                            {
-                                offSetsToCommit.Add(o);
-                                bool aux;
-                                OffsetsReceived.TryRemove(o, out aux);
-                            }
-                        }
-                    }
-
-                    if (offSetsToCommit.Count > 0)
-                        consumer.Commit(offSetsToCommit).ConfigureAwait(false);
+                                    
 
                     Task toBeRemoved;
                     receiveTasks.TryRemove(t, out toBeRemoved);
@@ -242,9 +242,14 @@ namespace NServiceBus.Transports.Kafka.Connection
             {
                 var message = await retrieved.UnWrap().ConfigureAwait(false);
 
-                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, false, (a, b) => false);
+
+                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, false, (a, b) => false);                  
 
                 await Process(message).ConfigureAwait(false);
+
+                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, true, (a, b) => true);
+                   
+                
 
             }
 
@@ -258,6 +263,66 @@ namespace NServiceBus.Transports.Kafka.Connection
             }
         }
 
+
+        async Task CommitOffsets()
+        {
+        
+                List<TopicPartitionOffset> offSetsToCommit = new List<TopicPartitionOffset>();
+      
+                var partitions = from offset in OffsetsReceived.Keys
+                                 group offset by new
+                                 {
+                                     offset.Topic,
+                                     offset.Partition
+                                 } into keys
+                                 select new
+                                 {
+                                     offsetNames = keys.Key.Topic + keys.Key.Partition,
+                                     offsetValues = keys.ToList()
+                                 };
+          
+                foreach (var k in partitions)
+                {
+                    var orderedOffsets = k.offsetValues.OrderBy(p => p.Offset);
+
+                    TopicPartitionOffset maxOffset = new TopicPartitionOffset();
+                    var offsetFound = false;
+
+                    foreach (var o in orderedOffsets)
+                    {
+
+                        if (OffsetsReceived.Keys.Contains(o) && OffsetsReceived[o] != true)
+                        {
+                            continue;
+                        }
+                        else
+                        {
+                            maxOffset = o;
+                            offsetFound = true;
+
+
+                            bool aux;
+                            if (!OffsetsReceived.TryRemove(o, out aux))
+                            {
+                                Logger.Warn("offset received cound not be removed from list");
+
+                                return;
+                            }
+                        }
+                    }
+
+                    if (offsetFound)
+                    {
+                        maxOffset.Offset = maxOffset.Offset + 1;
+                        offSetsToCommit.Add(maxOffset);
+                    }
+                }
+            
+            if (offSetsToCommit.Count > 0)
+                    await consumer.Commit(offSetsToCommit).ConfigureAwait(false);
+            
+        }
+       
 
         async Task Process(MessageWrapper message)
         {
@@ -302,6 +367,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                         var messageContext = new MessageContext(messageId, headers, message.Body ?? new byte[0], transportTransaction, tokenSource, new ContextBag());
                         await onMessage(messageContext).ConfigureAwait(false);
                         processed = true;
+                       
                     }
                     catch (Exception ex)
                     {

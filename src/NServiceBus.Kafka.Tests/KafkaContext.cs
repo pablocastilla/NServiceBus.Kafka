@@ -45,7 +45,7 @@ namespace NServiceBus.Transport.Kafka.Tests
             messagePump = new MessagePump(endpointName, settingsHolder, connectionString);
            
 
-            subscriptionManager = new SubscriptionManager(messagePump);
+            subscriptionManager = new SubscriptionManager(messagePump,null);
 
             foreach (var t in typesToSubscribeTo)
             {

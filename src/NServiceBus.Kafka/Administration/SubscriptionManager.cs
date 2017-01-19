@@ -15,19 +15,21 @@ namespace NServiceBus.Transports.Kafka.Administration
     class SubscriptionManager : IManageSubscriptions
     {
         private readonly MessagePump messagePump;
+        private readonly QueueCreator queueCreator;
 
-        public SubscriptionManager(MessagePump messagePump)
+        public SubscriptionManager(MessagePump messagePump, QueueCreator queueCreator)
         {
             this.messagePump = messagePump;
+            this.queueCreator = queueCreator;
         }
 
-        public Task Subscribe(Type eventType, ContextBag context)
+        public async Task Subscribe(Type eventType, ContextBag context)
         {           
            // var topics = GetTypeHierarchy( eventType);
 
-            CreateSubscription(new HashSet<string>() { ExchangeName(eventType) });
+            await CreateSubscription(new HashSet<string>() { ExchangeName(eventType) });
 
-            return Task.FromResult(0); 
+            //return Task.FromResult(0); 
         }
 
         public Task Unsubscribe(Type eventType, ContextBag context)
@@ -72,7 +74,7 @@ namespace NServiceBus.Transports.Kafka.Administration
            
         }
 
-        void CreateSubscription(HashSet<string> topics)
+        public async Task CreateSubscription(HashSet<string> topics)
         {
             var finalTopics = topics.Where(t => !typeTopologyConfiguredSet.ContainsKey(t));
 
@@ -91,6 +93,7 @@ namespace NServiceBus.Transports.Kafka.Administration
 
             }
 
+            await queueCreator.CreateQueues(subscriptionList);
             consumer.AddSubscriptionsBlocking(subscriptionList);
             consumer.CommitSubscriptionsBlocking();
         }
