@@ -2,8 +2,7 @@ Kafka transport for NServiceBus. Part of:
 https://pablocastilla.wordpress.com/2017/01/03/my-proposal-for-joining-net-and-the-hadoop-ecosystem/
 
 Example of configuring the consumer:
-
-            endpointConfiguration.DisableFeature<TimeoutManager>();
+            
             endpointConfiguration.UseTransport<KafkaTransport>().ConnectionString("127.0.0.1:9092");
  
             var recoverability = endpointConfiguration.Recoverability();
