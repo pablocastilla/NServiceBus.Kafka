@@ -12,34 +12,34 @@ namespace NServiceBus.Transports.Kafka.Connection
     {
         static Object o = new Object();
         static ILog Logger = LogManager.GetLogger(typeof(EventConsumer));
-        static Dictionary<string,List<string>> subscriptionDictionary = new Dictionary<string, List<string>>();
+        static Dictionary<string,List<Subscription>> subscriptionDictionary = new Dictionary<string, List<Subscription>>();
 
         public static void AddSubscriptionsBlocking(this EventConsumer consumer, List<string> topicsToAdd)
         {
             lock (o)
             {
-                List<string> subscriptionList;
+                List<Subscription> subscriptionList;
                 if (!subscriptionDictionary.ContainsKey(consumer.Name))
                 {
-                    subscriptionList = new List<string>();
+                    subscriptionList = new List<Subscription>();
                     subscriptionDictionary.Add(consumer.Name, subscriptionList);
                 }
                 else
                     subscriptionList = subscriptionDictionary[consumer.Name];
 
-                var finalTopics = topicsToAdd.Where(t => !subscriptionList.Contains(t));
+                var finalTopics = topicsToAdd.Where(t => !subscriptionList.Select(s=> s.Topic).Contains(t));
 
                 if (finalTopics.Count() == 0)
                     return;
 
                 foreach (var topic in finalTopics)
-                {
-                    if (!subscriptionList.Contains(topic))
-                        subscriptionList.Add(topic);
+                {                
+                        
+                     subscriptionList.Add(new Subscription() { Topic = topic });
 
                 }
 
-                Logger.Debug("Subscriptions:" + string.Join(", ", subscriptionList));
+                Logger.Debug("Subscriptions added:" + string.Join(", ", subscriptionList));
 
                 
 
@@ -51,10 +51,11 @@ namespace NServiceBus.Transports.Kafka.Connection
             lock (o)
             {
 
-                List<string> subscriptionList;
+                List<Subscription> subscriptionList;
+
                 if (!subscriptionDictionary.ContainsKey(consumer.Name))
                 {
-                    subscriptionList = new List<string>();
+                    subscriptionList = new List<Subscription>();
                     subscriptionDictionary.Add(consumer.Name, subscriptionList);
                 }
                 else
@@ -62,9 +63,24 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 Logger.Debug("Subscriptions committed:" + string.Join(", ", subscriptionList));
 
-                consumer.Subscribe(subscriptionList);
+                var subscriptionToCommit = subscriptionList.Where(s => !s.Committed).Select(s=>s.Topic).ToList();
+
+                if (subscriptionToCommit.Count == 0)
+                    return;
+
+                consumer.Subscribe(subscriptionToCommit);
+
+                subscriptionList.Where(s => subscriptionToCommit.Contains(s.Topic)).ToList().ForEach(s => s.Committed=true);
 
             }
+        }
+
+        class Subscription
+        {
+            public string Topic { get; set; }
+
+            public bool Committed { get; set; }
+
         }
     }
 }

@@ -31,7 +31,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         private PushSettings settings;
         private SettingsHolder settingsHolder;
         private string connectionString;
-        private string endpointName;
+        private string inputQueue;
 
         // Start
         int maxConcurrency;
@@ -44,20 +44,22 @@ namespace NServiceBus.Transport.Kafka.Receiving
         // Stop
         TaskCompletionSource<bool> connectionShutdownCompleted;
 
-        public MessagePump( string endpointName,SettingsHolder settingsHolder,string connectionString)
-        {
-            
-            this.endpointName = endpointName;
+        public MessagePump( SettingsHolder settingsHolder,string connectionString)
+        {           
+           
             this.settingsHolder = settingsHolder;
             this.connectionString = connectionString;
         }
 
         public Task Init(Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError, PushSettings settings)
         {
-            var consumerHolder = new ConsumerHolder(connectionString, settings.InputQueue, settings, settingsHolder, onMessage, onError);
-            consumerHolderList.Add(consumerHolder);
+            this.inputQueue = settings.InputQueue;
 
-            if (endpointName == settings.InputQueue)
+            var consumerHolder = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError);
+            consumerHolderList.Add(consumerHolder);
+            
+
+            if (inputQueue== settingsHolder.EndpointName())
             {
                 mainConsumer = consumerHolder;
             }
@@ -80,9 +82,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
             maxConcurrency = limitations.MaxConcurrency;
             semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
-
-            System.Threading.Thread.Sleep(5000);
-
+                      
             consumerHolderList.ForEach(ch => ch.Start(messageProcessing));
             
 

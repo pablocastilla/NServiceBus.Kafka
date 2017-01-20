@@ -94,6 +94,7 @@ namespace NServiceBus.Transports.Kafka.Administration
             }
 
             await queueCreator.CreateQueues(subscriptionList);
+
             consumer.AddSubscriptionsBlocking(subscriptionList);
             consumer.CommitSubscriptionsBlocking();
         }

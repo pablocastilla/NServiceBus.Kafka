@@ -158,9 +158,8 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
                     await process.StandardInput.WriteLineAsync(kafkaCreateTopicCommand + q).ConfigureAwait(false);
                 }
-
-               
-
+                
+                
             }
             catch (Exception ex)
             {

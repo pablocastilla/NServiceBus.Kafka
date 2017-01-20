@@ -106,7 +106,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                 try
                 {
                     
-                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,5), token)).ConfigureAwait(false);                    
+                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,0,1,0), token)).ConfigureAwait(false);                    
                     await CommitOffsets().ConfigureAwait(false);
                 }
                 catch (Exception)
@@ -169,7 +169,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             if (settingsHolder.TryGet<string>(WellKnownConfigurationKeys.KafkaHeartBeatInterval, out heartBeatInterval))                
                 config["heartbeat.interval.ms"] = heartBeatInterval;
             else
-                config["heartbeat.interval.ms"] = "1000";
+                config["heartbeat.interval.ms"] = "10000";
 
             config.DefaultTopicConfig = defaultConfig;
 
@@ -240,6 +240,9 @@ namespace NServiceBus.Transports.Kafka.Connection
         {
             try
             {
+                if (OffsetsReceived.ContainsKey(retrieved.TopicPartitionOffset))
+                    return;
+
                 var message = await retrieved.UnWrap().ConfigureAwait(false);
 
 
@@ -378,14 +381,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                     }
                 }
 
-                if (processed && tokenSource.IsCancellationRequested)
-                {
-
-                }
-                else
-                {
-
-                }
+               
             }
         }
 
@@ -395,24 +391,26 @@ namespace NServiceBus.Transports.Kafka.Connection
         {
             Logger.Debug($"Assigned partitions: [{string.Join(", ", e)}], member id: {((EventConsumer)sender).MemberId}");
 
+           
             if (e.Count == 0 || disposing)
-                return;
+                  return;
 
             //TODO: circuit breaker ok
+            ((EventConsumer)sender).Assign(e);
 
-            foreach (var partition in e)
+          /*  foreach (var partition in e)
             {
                 var partitionName = partition.Topic + partition.Partition;
 
                 if (!assigments.ContainsKey(partitionName))
-                    assigments.Add(partitionName, partition);
+                      assigments.Add(partitionName, partition);
                 else
-                    assigments[partitionName] = partition;
+                      assigments[partitionName] = partition;
 
             }
 
             var partititionsToAssign = assigments.Values.Select(p => p).ToList();
-            ((EventConsumer)sender).Assign(partititionsToAssign);
+            ((EventConsumer)sender).Assign(partititionsToAssign);*/
         }
 
 
@@ -422,12 +420,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                 return;
 
             Logger.Debug($"Revoked partitions: [{string.Join(", ", partitions)}]");
-            foreach (var p in partitions)
-                assigments.Remove(p.Topic + p.Partition);
-
-            var partititionsToAssign = assigments.Values.Select(p => p).ToList();
-
-            //((EventConsumer)sender).Assign(partititionsToAssign);
+            
             ((EventConsumer)sender).Unassign();
         }
 

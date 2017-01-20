@@ -36,7 +36,7 @@ namespace NServiceBus.Transport.Kafka
             serializer = BuildSerializer(settings);
             this.queueCreator = new QueueCreator(settings);
 
-            messagePump = new MessagePump(settings.EndpointName(), settings,connectionString);
+            messagePump = new MessagePump(settings,connectionString);
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
         }
 
