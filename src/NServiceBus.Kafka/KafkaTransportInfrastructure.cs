@@ -88,12 +88,7 @@ namespace NServiceBus.Transport.Kafka
         public override string ToTransportAddress(LogicalAddress logicalAddress)
         {
             var topic = new StringBuilder(logicalAddress.EndpointInstance.Endpoint);
-
-            if (logicalAddress.EndpointInstance.Discriminator != null)
-            {
-                topic.Append("-" + logicalAddress.EndpointInstance.Discriminator);
-            }
-
+                       
             if (logicalAddress.Qualifier != null)
             {
                 topic.Append("." + logicalAddress.Qualifier);

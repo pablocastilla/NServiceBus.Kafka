@@ -25,11 +25,10 @@ namespace NServiceBus.Transports.Kafka.Administration
 
         public async Task Subscribe(Type eventType, ContextBag context)
         {           
-           // var topics = GetTypeHierarchy( eventType);
-
+           
             await CreateSubscription(new HashSet<string>() { ExchangeName(eventType) });
 
-            //return Task.FromResult(0); 
+           
         }
 
         public Task Unsubscribe(Type eventType, ContextBag context)

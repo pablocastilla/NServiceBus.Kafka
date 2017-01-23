@@ -14,7 +14,12 @@ using NServiceBus.Transport.Kafka;
 
 public class ConfigureScenariosForKafkaTransport : IConfigureSupportedScenariosForTestExecution
 {
-    public IEnumerable<Type> UnsupportedScenarioDescriptorTypes => new[] {   typeof(AllTransportsWithMessageDrivenPubSub), typeof(AllTransportsWithoutNativeDeferral) };
+    public IEnumerable<Type> UnsupportedScenarioDescriptorTypes => new[] {
+        typeof(AllTransportsWithMessageDrivenPubSub),
+        typeof(AllTransportsWithoutNativeDeferral),
+        typeof(AllDtcTransports),
+        typeof(AllNativeMultiQueueTransactionTransports),
+    };
 }
 
 public class ConfigureEndpointKafkaTransport : IConfigureEndpointTestExecution

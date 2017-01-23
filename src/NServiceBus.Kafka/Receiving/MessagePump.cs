@@ -83,9 +83,10 @@ namespace NServiceBus.Transport.Kafka.Receiving
             maxConcurrency = limitations.MaxConcurrency;
             semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
                       
-            consumerHolderList.ForEach(ch => ch.Start(messageProcessing));
-            
+            consumerHolderList.ForEach(ch => ch.Init(messageProcessing));
 
+            
+            consumerHolderList.ForEach(ch => ch.Start());
         }
 
            

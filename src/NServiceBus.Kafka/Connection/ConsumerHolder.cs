@@ -62,7 +62,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             }
         }
 
-        public void Start(CancellationTokenSource tokenSource)
+        public void Init(CancellationTokenSource tokenSource)
         {
             this.tokenSource = tokenSource;
             timer = Task.Run(TimerLoop);
@@ -71,14 +71,24 @@ namespace NServiceBus.Transports.Kafka.Connection
             consumer.OnMessage += Consumer_OnMessage;
 
             consumer.AddSubscriptionsBlocking(new List<string>() { endpointName });
-            consumer.CommitSubscriptionsBlocking();
-
-
-            StartConsumer();
+            
 
         }
 
-        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
+        public void Start()
+        {
+            consumer.CommitSubscriptionsBlocking();
+            StartConsumer();
+
+            /* Task.WaitAll(Task.Delay(new TimeSpan(0, 0, 5)).ContinueWith(
+                 (status) =>
+                 {
+                     consumer.CommitSubscriptionsBlocking();
+                     StartConsumer();
+                 })); ;*/
+        }
+
+            static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
         public async Task Stop()
         {
             consumer.OnError -= Consumer_OnError;
@@ -270,9 +280,10 @@ namespace NServiceBus.Transports.Kafka.Connection
         async Task CommitOffsets()
         {
         
-                List<TopicPartitionOffset> offSetsToCommit = new List<TopicPartitionOffset>();
-      
-                var partitions = from offset in OffsetsReceived.Keys
+            List<TopicPartitionOffset> offSetsToCommit = new List<TopicPartitionOffset>();
+            List<TopicPartitionOffset> offSetsToRemove = new List<TopicPartitionOffset>();
+
+            var partitions = from offset in OffsetsReceived.Keys
                                  group offset by new
                                  {
                                      offset.Topic,
@@ -301,16 +312,11 @@ namespace NServiceBus.Transports.Kafka.Connection
                         else
                         {
                             maxOffset = o;
-                            offsetFound = true;
+                            offsetFound = true;                          
 
+                            offSetsToRemove.Add(o);
 
-                            bool aux;
-                            if (!OffsetsReceived.TryRemove(o, out aux))
-                            {
-                                Logger.Warn("offset received cound not be removed from list");
-
-                                return;
-                            }
+                           
                         }
                     }
 
@@ -323,6 +329,18 @@ namespace NServiceBus.Transports.Kafka.Connection
             
             if (offSetsToCommit.Count > 0)
                     await consumer.Commit(offSetsToCommit).ConfigureAwait(false);
+
+            foreach (var offsetToRemove in offSetsToRemove)
+            {
+                bool aux;
+
+                if (!OffsetsReceived.TryRemove(offsetToRemove, out aux))
+                {
+                    Logger.Warn("offset received cound not be removed from list");
+
+                    return;
+                }
+            }
             
         }
        

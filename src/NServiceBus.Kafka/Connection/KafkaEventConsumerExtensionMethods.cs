@@ -63,7 +63,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 Logger.Debug("Subscriptions committed:" + string.Join(", ", subscriptionList));
 
-                var subscriptionToCommit = subscriptionList.Where(s => !s.Committed).Select(s=>s.Topic).ToList();
+                var subscriptionToCommit = subscriptionList.Select(s=>s.Topic).ToList();
 
                 if (subscriptionToCommit.Count == 0)
                     return;
