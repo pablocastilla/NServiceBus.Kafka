@@ -29,11 +29,9 @@ namespace NServiceBus.Transports.Kafka.Administration
         }
 
         public async Task Subscribe(Type eventType, ContextBag context)
-        {           
-           
+        {                      
             await CreateSubscription(new HashSet<string>() { ExchangeName(eventType) });
-
-           
+                       
         }
 
         public Task Unsubscribe(Type eventType, ContextBag context)
@@ -90,7 +88,7 @@ namespace NServiceBus.Transports.Kafka.Administration
 
             foreach (var exchangeName in finalTopics)
             {
-                if (!subscriptionList.Contains(exchangeName))
+                if (!subscriptionList.Contains(exchangeName)) 
                     subscriptionList.Add(exchangeName);
 
                 MarkTypeConfigured(exchangeName, consumer);
