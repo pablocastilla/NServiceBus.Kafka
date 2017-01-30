@@ -19,6 +19,7 @@ public class ConfigureScenariosForKafkaTransport : IConfigureSupportedScenariosF
         typeof(AllTransportsWithoutNativeDeferral),
         typeof(AllDtcTransports),
         typeof(AllNativeMultiQueueTransactionTransports),
+        typeof(AllOutboxCapableStorages)
     };
 }
 

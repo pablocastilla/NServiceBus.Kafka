@@ -9,6 +9,7 @@ using NServiceBus.Transports.Kafka.Connection;
 using RdKafka;
 using System.Collections.Concurrent;
 using NServiceBus.Transport.Kafka.Receiving;
+using NServiceBus.Settings;
 
 namespace NServiceBus.Transports.Kafka.Administration
 {
@@ -16,11 +17,15 @@ namespace NServiceBus.Transports.Kafka.Administration
     {
         private readonly MessagePump messagePump;
         private readonly QueueCreator queueCreator;
+    
 
         public SubscriptionManager(MessagePump messagePump, QueueCreator queueCreator)
         {
             this.messagePump = messagePump;
             this.queueCreator = queueCreator;
+           
+
+
         }
 
         public async Task Subscribe(Type eventType, ContextBag context)
@@ -80,7 +85,7 @@ namespace NServiceBus.Transports.Kafka.Administration
             if (finalTopics.Count() == 0)
                 return;
 
-            var consumer = messagePump.getMainConsumer();
+            var consumer = messagePump.GetEventsConsumerHolder().GetConsumer();
             var subscriptionList = consumer.Subscription;
 
             foreach (var exchangeName in finalTopics)
@@ -95,7 +100,7 @@ namespace NServiceBus.Transports.Kafka.Administration
             await queueCreator.CreateQueues(subscriptionList);
 
             consumer.AddSubscriptionsBlocking(subscriptionList);
-            consumer.CommitSubscriptionsBlocking();
+            
         }
 
        

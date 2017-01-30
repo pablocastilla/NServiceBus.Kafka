@@ -77,18 +77,13 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         public void Start()
         {
-            consumer.CommitSubscriptionsBlocking();
+           
             StartConsumer();
 
-            /* Task.WaitAll(Task.Delay(new TimeSpan(0, 0, 5)).ContinueWith(
-                 (status) =>
-                 {
-                     consumer.CommitSubscriptionsBlocking();
-                     StartConsumer();
-                 })); ;*/
+           
         }
 
-            static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
+        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
         public async Task Stop()
         {
             consumer.OnError -= Consumer_OnError;
@@ -172,14 +167,14 @@ namespace NServiceBus.Transports.Kafka.Connection
             if (settingsHolder.TryGet<string>(WellKnownConfigurationKeys.KafkaSessionTimeout, out sessionTimeout) )
                 config["session.timeout.ms"] = sessionTimeout;
             else
-                config["session.timeout.ms"] = "30000";
+                config["session.timeout.ms"] = "15000";
 
 
             string heartBeatInterval;
             if (settingsHolder.TryGet<string>(WellKnownConfigurationKeys.KafkaHeartBeatInterval, out heartBeatInterval))                
                 config["heartbeat.interval.ms"] = heartBeatInterval;
             else
-                config["heartbeat.interval.ms"] = "10000";
+                config["heartbeat.interval.ms"] = "5000";
 
             config.DefaultTopicConfig = defaultConfig;
 
@@ -409,33 +404,16 @@ namespace NServiceBus.Transports.Kafka.Connection
         {
             Logger.Debug($"Assigned partitions: [{string.Join(", ", e)}], member id: {((EventConsumer)sender).MemberId}");
 
-           
-            if (e.Count == 0 || disposing)
-                  return;
-
+                     
             //TODO: circuit breaker ok
             ((EventConsumer)sender).Assign(e);
 
-          /*  foreach (var partition in e)
-            {
-                var partitionName = partition.Topic + partition.Partition;
-
-                if (!assigments.ContainsKey(partitionName))
-                      assigments.Add(partitionName, partition);
-                else
-                      assigments[partitionName] = partition;
-
-            }
-
-            var partititionsToAssign = assigments.Values.Select(p => p).ToList();
-            ((EventConsumer)sender).Assign(partititionsToAssign);*/
+         
         }
 
 
         private void Consumer_OnPartitionsRevoked(object sender, List<TopicPartitionOffset> partitions)
-        {
-            if (disposing || disposedValue)
-                return;
+        {       
 
             Logger.Debug($"Revoked partitions: [{string.Join(", ", partitions)}]");
             
@@ -470,11 +448,11 @@ namespace NServiceBus.Transports.Kafka.Connection
                     if (consumer != null)
                     {
                         Logger.Debug("Disposing " + consumer.Name);
-
+                                              
+                        consumer.Stop().Wait();
                         consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
                         consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
                         consumer.OnEndReached -= Consumer_OnEndReached;
-                        consumer.Stop();
                         consumer.Dispose();
                     }
 

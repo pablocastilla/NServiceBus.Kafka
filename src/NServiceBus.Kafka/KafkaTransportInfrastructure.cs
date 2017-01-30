@@ -28,6 +28,7 @@ namespace NServiceBus.Transport.Kafka
         MessagePump  messagePump;
         MessageDispatcher messageDispatcher;
         QueueCreator queueCreator;
+        SubscriptionManager subscriptionManager;
 
         public KafkaTransportInfrastructure(SettingsHolder settings, string connectionString)
         {
@@ -38,6 +39,7 @@ namespace NServiceBus.Transport.Kafka
 
             messagePump = new MessagePump(settings,connectionString);
             messageDispatcher = new MessageDispatcher(new Transports.Kafka.Connection.ProducerFactory(connectionString));
+            subscriptionManager = new SubscriptionManager(messagePump, queueCreator);
         }
 
         public override TransportReceiveInfrastructure ConfigureReceiveInfrastructure()
@@ -82,7 +84,7 @@ namespace NServiceBus.Transport.Kafka
       
         public override TransportSubscriptionInfrastructure ConfigureSubscriptionInfrastructure()
         {
-            return new TransportSubscriptionInfrastructure(() => new SubscriptionManager(messagePump, queueCreator));
+            return new TransportSubscriptionInfrastructure(() => subscriptionManager);
         }
 
         public override string ToTransportAddress(LogicalAddress logicalAddress)

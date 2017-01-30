@@ -39,8 +39,10 @@ namespace NServiceBus.Transport.Kafka.Receiving
         CancellationTokenSource messageProcessing;
 
         ConsumerHolder mainConsumer;
-       
-        
+        ConsumerHolder eventsConsumer;
+        Func<MessageContext, Task> onMessage;
+        Func<ErrorContext, Task<ErrorHandleResult>> onError;
+
         // Stop
         TaskCompletionSource<bool> connectionShutdownCompleted;
 
@@ -62,31 +64,39 @@ namespace NServiceBus.Transport.Kafka.Receiving
             if (inputQueue== settingsHolder.EndpointName())
             {
                 mainConsumer = consumerHolder;
+                this.onError = onError;
+                this.onMessage = onMessage;
+                eventsConsumer = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError);
+                consumerHolderList.Add(eventsConsumer);
             }
+
             //TODO: circuit breaker?
             //circuitBreaker = new MessagePumpConnectionFailedCircuitBreaker($"'{settings.InputQueue} MessagePump'", timeToWaitBeforeTriggeringCircuitBreaker, criticalError);
                     
             return Task.FromResult(0);
         }
 
-        public EventConsumer getMainConsumer()
+        public ConsumerHolder GetEventsConsumerHolder()
+        {
+            return eventsConsumer;
+        }
+
+        public EventConsumer GetMainConsumer()
         {
             return mainConsumer.GetConsumer();
         }
 
         public void Start(PushRuntimeSettings limitations)
-        {
-          
+        {          
             //runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
             messageProcessing = new CancellationTokenSource();
 
             maxConcurrency = limitations.MaxConcurrency;
             semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
-                      
-            consumerHolderList.ForEach(ch => ch.Init(messageProcessing));
 
-            
-            consumerHolderList.ForEach(ch => ch.Start());
+            Parallel.ForEach(consumerHolderList, ch => ch.Init(messageProcessing));
+            Parallel.ForEach(consumerHolderList, ch => ch.Start());
+
         }
 
            
