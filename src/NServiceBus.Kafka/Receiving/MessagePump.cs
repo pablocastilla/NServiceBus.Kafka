@@ -66,7 +66,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
                 mainConsumer = consumerHolder;
                 this.onError = onError;
                 this.onMessage = onMessage;
-                eventsConsumer = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError);
+                eventsConsumer = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError,true);
                 consumerHolderList.Add(eventsConsumer);
             }
 

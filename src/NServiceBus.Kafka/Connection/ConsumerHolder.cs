@@ -36,10 +36,11 @@ namespace NServiceBus.Transports.Kafka.Connection
         readonly TransportTransaction transportTransaction = new TransportTransaction();
         Task timer;
         CancellationTokenSource tokenSource;
-      
+        private bool doNotSubscribeToEndPointQueue;
 
 
-        public ConsumerHolder(string connectionString, string endpointName, PushSettings settings, SettingsHolder settingsHolder, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError) 
+
+        public ConsumerHolder(string connectionString, string endpointName, PushSettings settings, SettingsHolder settingsHolder, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, bool doNotSubscribeToEndPointQueue=false) 
         {
             this.onMessage = onMessage;
             this.onError = onError;
@@ -48,6 +49,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             this.settingsHolder = settingsHolder;
             this.connectionString = connectionString;
             this.endpointName = endpointName;
+            this.doNotSubscribeToEndPointQueue = doNotSubscribeToEndPointQueue;
 
             if (consumer == null)
             {
@@ -70,7 +72,8 @@ namespace NServiceBus.Transports.Kafka.Connection
             consumer.OnError += Consumer_OnError;
             consumer.OnMessage += Consumer_OnMessage;
 
-            consumer.AddSubscriptionsBlocking(new List<string>() { endpointName });
+            if(!doNotSubscribeToEndPointQueue)
+                consumer.AddSubscriptions(new List<string>() { endpointName });
             
 
         }
@@ -187,7 +190,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
             if (topics != null && consumer != null)
             {               
-                consumer.AddSubscriptionsBlocking(topics);
+                consumer.AddSubscriptions(topics);
             }
 
             consumer.OnPartitionsAssigned += Consumer_OnPartitionsAssigned;

@@ -36,9 +36,14 @@ namespace NServiceBus.Transports.Kafka.Administration
 
         public Task Unsubscribe(Type eventType, ContextBag context)
         {
-            //var consumer = consumerFactory.GetConsumer();
+            var topicsToUnsubscribe = GetTypeHierarchy(eventType);
 
-           // consumer.Unsubscribe();
+            var consumer = messagePump.GetEventsConsumerHolder().GetConsumer();
+            var subscriptionList = consumer.Subscription;
+
+            subscriptionList = subscriptionList.Where(t=> !topicsToUnsubscribe.Contains(t)).ToList();
+
+            consumer.AddSubscriptions(subscriptionList);
 
             return Task.FromResult(0);
         }
@@ -97,7 +102,7 @@ namespace NServiceBus.Transports.Kafka.Administration
 
             await queueCreator.CreateQueues(subscriptionList);
 
-            consumer.AddSubscriptionsBlocking(subscriptionList);
+            consumer.AddSubscriptions(subscriptionList);
             
         }
 

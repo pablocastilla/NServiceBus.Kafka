@@ -13,7 +13,7 @@ namespace NServiceBus.Transports.Kafka.Connection
      
         static ILog Logger = LogManager.GetLogger(typeof(EventConsumer));
     
-        public static void AddSubscriptionsBlocking(this EventConsumer consumer, List<string> topicsToAdd)
+        public static void AddSubscriptions(this EventConsumer consumer, List<string> topicsToAdd)
         {
 
             consumer.Subscribe(topicsToAdd);
