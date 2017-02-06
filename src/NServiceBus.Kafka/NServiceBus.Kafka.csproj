@@ -56,6 +56,7 @@
     <Compile Include="Connection\ConsumerHolder.cs" />
     <Compile Include="Connection\KafkaEventConsumerExtensionMethods.cs" />
     <Compile Include="Connection\ProducerFactory.cs" />
+    <Compile Include="Connection\RepeatedFailuresOverTimeCircuitBreaker.cs" />
     <Compile Include="InternalsVisibleTo.cs" />
     <Compile Include="KafkaTransport.cs" />
     <Compile Include="KafkaTransportInfrastructure.cs" />

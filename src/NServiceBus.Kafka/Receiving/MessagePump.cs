@@ -21,8 +21,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
     {
 
         List<ConsumerHolder> consumerHolderList = new List<ConsumerHolder>();
-       
-      
+             
         static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
 
         static ILog Logger = LogManager.GetLogger(typeof(MessagePump));
@@ -43,8 +42,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         Func<MessageContext, Task> onMessage;
         Func<ErrorContext, Task<ErrorHandleResult>> onError;
 
-        // Stop
-        TaskCompletionSource<bool> connectionShutdownCompleted;
+      
 
         public MessagePump( SettingsHolder settingsHolder,string connectionString)
         {           
@@ -57,22 +55,20 @@ namespace NServiceBus.Transport.Kafka.Receiving
         {
             this.inputQueue = settings.InputQueue;
 
-            var consumerHolder = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError);
+            var consumerHolder = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError,criticalError);
             consumerHolderList.Add(consumerHolder);
-            
+      
 
             if (inputQueue== settingsHolder.EndpointName())
             {
                 mainConsumer = consumerHolder;
                 this.onError = onError;
                 this.onMessage = onMessage;
-                eventsConsumer = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError,true);
+                eventsConsumer = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError, criticalError,true);
                 consumerHolderList.Add(eventsConsumer);
             }
 
-            //TODO: circuit breaker?
-            //circuitBreaker = new MessagePumpConnectionFailedCircuitBreaker($"'{settings.InputQueue} MessagePump'", timeToWaitBeforeTriggeringCircuitBreaker, criticalError);
-                    
+                      
             return Task.FromResult(0);
         }
 
@@ -88,14 +84,14 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
         public void Start(PushRuntimeSettings limitations)
         {          
-            //runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
+           
             messageProcessing = new CancellationTokenSource();
 
             maxConcurrency = limitations.MaxConcurrency;
             semaphore = new SemaphoreSlim(limitations.MaxConcurrency, limitations.MaxConcurrency);
 
             Parallel.ForEach(consumerHolderList, ch => ch.Init(messageProcessing));
-            Parallel.ForEach(consumerHolderList, ch => ch.Start());
+            Parallel.ForEach(consumerHolderList, ch => ch.Start(limitations));
 
         }
 
@@ -107,20 +103,13 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
           
             messageProcessing.Cancel();
-            // ReSharper disable once MethodSupportsCancellation
+            
             var timeoutTask = Task.Delay(StoppingAllTasksTimeout);
-
-            /*  var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
-
-               if (finishedTask.Equals(timeoutTask))
-               {
-                   Logger.Error("The message pump failed to stop with in the time allowed(30s)");
-               }*/
+                   
 
             foreach (var ch in consumerHolderList)
                 await ch.Stop();
-
-
+            
 
         }
 

@@ -37,10 +37,12 @@ namespace NServiceBus.Transports.Kafka.Connection
         Task timer;
         CancellationTokenSource tokenSource;
         private bool doNotSubscribeToEndPointQueue;
+        SemaphoreSlim throttler;
+        RepeatedFailuresOverTimeCircuitBreaker circuitBreaker;
 
 
 
-        public ConsumerHolder(string connectionString, string endpointName, PushSettings settings, SettingsHolder settingsHolder, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, bool doNotSubscribeToEndPointQueue=false) 
+        public ConsumerHolder(string connectionString, string endpointName, PushSettings settings, SettingsHolder settingsHolder, Func<MessageContext, Task> onMessage, Func<ErrorContext, Task<ErrorHandleResult>> onError, CriticalError criticalError,  bool doNotSubscribeToEndPointQueue=false) 
         {
             this.onMessage = onMessage;
             this.onError = onError;
@@ -50,6 +52,9 @@ namespace NServiceBus.Transports.Kafka.Connection
             this.connectionString = connectionString;
             this.endpointName = endpointName;
             this.doNotSubscribeToEndPointQueue = doNotSubscribeToEndPointQueue;
+
+            circuitBreaker = new RepeatedFailuresOverTimeCircuitBreaker("kafka circuit breaker", new TimeSpan(30), ex => criticalError.Raise("Failed to receive message from Kafka.", ex));
+
 
             if (consumer == null)
             {
@@ -78,9 +83,9 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         }
 
-        public void Start()
+        public void Start(PushRuntimeSettings limitations)
         {
-           
+            throttler = new SemaphoreSlim(limitations.MaxConcurrency);
             StartConsumer();
 
            
@@ -206,12 +211,9 @@ namespace NServiceBus.Transports.Kafka.Connection
         private void Consumer_OnError(object sender, Handle.ErrorArgs e)
         {
             Logger.Error("Consumer_OnError: " + e.Reason);
-            /*((EventConsumer)sender).Stop().Wait(30000);
-            consumerFactory.ResetConsumer();
-            consumer = consumerFactory.GetConsumer();
-            consumer.OnError += Consumer_OnError;
-            consumer.OnMessage += Consumer_OnMessage;
-            consumerFactory.StartConsumer();*/
+
+            circuitBreaker.Failure(e.Reason);
+          
         }
 
 
@@ -222,6 +224,7 @@ namespace NServiceBus.Transports.Kafka.Connection
         {
             try
             {
+                circuitBreaker.Success();
                 Logger.Debug($"message consumed");
                 var receiveTask = InnerReceive(e);
                 
@@ -251,6 +254,8 @@ namespace NServiceBus.Transports.Kafka.Connection
                 if (OffsetsReceived.ContainsKey(retrieved.TopicPartitionOffset))
                     return;
 
+                await throttler.WaitAsync(tokenSource.Token);
+
                 var message = await retrieved.UnWrap().ConfigureAwait(false);
 
 
@@ -258,8 +263,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 await Process(message).ConfigureAwait(false);
 
-                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, true, (a, b) => true);
-                   
+                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, true, (a, b) => true);                   
                 
 
             }
@@ -270,7 +274,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             }
             finally
             {
-                //concurrencyLimiter.Release();
+                throttler.Release();
             }
         }
 
