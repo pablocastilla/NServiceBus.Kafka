@@ -27,7 +27,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
         static ILog Logger = LogManager.GetLogger(typeof(MessagePump));
        
         static readonly TransportTransaction transportTranaction = new TransportTransaction();
-        private PushSettings settings;
+        
         private SettingsHolder settingsHolder;
         private string connectionString;
         private string inputQueue;

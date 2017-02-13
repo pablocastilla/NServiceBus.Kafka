@@ -313,6 +313,7 @@
     <Compile Include="When_using_direct_routing.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

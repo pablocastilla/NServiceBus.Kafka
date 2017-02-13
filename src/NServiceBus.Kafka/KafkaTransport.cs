@@ -13,6 +13,7 @@ using NServiceBus.MessageInterfaces;
 using System.Reflection;
 using NServiceBus.Transports.Kafka.Administration;
 using System.Globalization;
+using System.Configuration;
 
 namespace NServiceBus.Transport.Kafka
 {
@@ -32,6 +33,18 @@ namespace NServiceBus.Transport.Kafka
             // register the MessageWrapper as a system message to have it registered in mappings and serializers
             settings.GetOrCreate<Conventions>().AddSystemMessagesConventions(t => t == typeof(MessageWrapper));
             settings.Set("Recoverability.DisableLegacyRetriesSatellite", true);
+
+            var appSettings = ConfigurationManager.AppSettings;
+
+            settings.Set(WellKnownConfigurationKeys.KafkaDebugEnabled, Convert.ToBoolean(appSettings[WellKnownConfigurationKeys.KafkaDebugEnabled] ?? "false"));
+            settings.Set(WellKnownConfigurationKeys.KafkaSessionTimeout, Convert.ToInt32(appSettings[WellKnownConfigurationKeys.KafkaSessionTimeout] ?? "30000"));
+            settings.Set(WellKnownConfigurationKeys.KafkaHeartBeatInterval, Convert.ToInt32(appSettings[WellKnownConfigurationKeys.KafkaHeartBeatInterval] ?? "5000"));
+            settings.Set(WellKnownConfigurationKeys.CreateQueues, Convert.ToBoolean(appSettings[WellKnownConfigurationKeys.CreateQueues] ?? "false"));
+            settings.Set(WellKnownConfigurationKeys.KafkaPathToBin, appSettings[WellKnownConfigurationKeys.KafkaPathToBin] ?? @"C:\kafka_2.11-0.10.1.0\bin\windows");
+            settings.Set(WellKnownConfigurationKeys.KafkaZooKeeperUrl, appSettings[WellKnownConfigurationKeys.KafkaZooKeeperUrl] ?? @"localhost:2181");
+            settings.Set(WellKnownConfigurationKeys.NumberOfPartitions, appSettings[WellKnownConfigurationKeys.NumberOfPartitions] ?? @"1");
+            settings.Set(WellKnownConfigurationKeys.ReplicationFactor, appSettings[WellKnownConfigurationKeys.ReplicationFactor] ?? @"1");
+
 
             // TODO: register metadata of the wrapper for the sake of XML serializer
             MessageMetadataRegistry registry;
