@@ -113,13 +113,17 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         async Task TimerLoop()
         {
+            int SecondsBetweenCommits;
+            if (!settingsHolder.TryGet<int>(WellKnownConfigurationKeys.SecondsBetweenCommits, out SecondsBetweenCommits))
+                SecondsBetweenCommits = 1;
+
             var token = tokenSource.Token;
             while (!tokenSource.IsCancellationRequested)
             {
                 try
                 {
                     
-                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,0,1,0), token)).ConfigureAwait(false);                    
+                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,0, SecondsBetweenCommits, 0), token)).ConfigureAwait(false);                    
                     await CommitOffsets().ConfigureAwait(false);
                 }
                 catch (Exception)
