@@ -248,17 +248,13 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 await throttler.WaitAsync(tokenSource.Token);
 
-                var message = await retrieved.UnWrap().ConfigureAwait(false);
+                var message = retrieved.UnWrap();
 
-                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, false, (a, b) => false);
+                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, false, (a, b) => false);                  
 
                 await Process(message).ConfigureAwait(false);
 
-                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, true, (a, b) => true);
-            }
-            catch (OperationCanceledException)
-            {
-                // For graceful shutdown purposes
+                OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, true, (a, b) => true);                   
             }
             catch (Exception ex)
             {

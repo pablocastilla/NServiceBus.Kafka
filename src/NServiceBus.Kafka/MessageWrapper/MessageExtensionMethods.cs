@@ -1,18 +1,13 @@
 ﻿using NServiceBus.Transport.Kafka;
 using RdKafka;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace NServiceBus.Transports.Kafka.Wrapper
 {
     internal static class MessageExtensionMethods
     {
-        
-        internal static async Task<MessageWrapper> UnWrap(this Message kafkaMessage)
+        internal static MessageWrapper UnWrap(this Message kafkaMessage)
         {
             MessageWrapper m;
             using (var stream = new MemoryStream(kafkaMessage.Payload))
@@ -22,7 +17,7 @@ namespace NServiceBus.Transports.Kafka.Wrapper
 
             if (m == null)
             {
-                throw new ArgumentNullException("Message is null");
+                throw new ArgumentNullException(nameof(kafkaMessage));
             }
 
             if (m.ReplyToAddress != null)
