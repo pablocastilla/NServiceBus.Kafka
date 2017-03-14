@@ -28,6 +28,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
                 if (!settings.TryGet<bool>(WellKnownConfigurationKeys.CreateQueues, out createQueues))
                     return;
 
+                if (!createQueues)
+                    return;
+
                 string pathToBin;
                 if (!settings.TryGet<string>(WellKnownConfigurationKeys.KafkaPathToBin, out pathToBin))
                     pathToBin = @"C:\kafka_2.11-0.10.1.0\bin\windows";
