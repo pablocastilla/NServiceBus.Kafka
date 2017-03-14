@@ -93,43 +93,7 @@ namespace NServiceBus.Transport.Kafka.Tests
             return Task.FromResult(message);
         }
 
-        protected List<IncomingMessage> ReceiveMessages(int timeoutInSeconds, int maxNumberOfMessages)
-        {
-            var result = new List<IncomingMessage>();
-
-            var finalTimeout = timeoutInSeconds * 1000;
-            try
-            {
-                int i = 0;
-                while (i < maxNumberOfMessages)
-                {
-
-                    try
-                    {
-                        IncomingMessage message;
-                        if (receivedMessages.TryTake(out message, finalTimeout))
-                        {
-                            result.Add(message);
-                            finalTimeout = 1000;
-                        }
-                                              
-                    }
-                    catch(Exception ex)
-                    {
-
-                    }
-
-                    i++;
-                }
-            }
-            catch (Exception)
-            {
-
-            }
-
-            return result;
-
-        }
+      
 
         bool TryReceiveMessage(out IncomingMessage message, TimeSpan timeout) =>
             receivedMessages.TryTake(out message, timeout);

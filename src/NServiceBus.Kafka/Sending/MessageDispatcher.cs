@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using NServiceBus.Extensibility;
 using NServiceBus.Transports.Kafka.Connection;
@@ -26,48 +25,45 @@ namespace NServiceBus.Kafka.Sending
             this.producerFactory = producerFactory;
         }
 
-        public async Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, ContextBag context)
+        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction,
+            ContextBag context)
         {
-           
+            var unicastTransportOperations = outgoingMessages.UnicastTransportOperations;
+            var multicastTransportOperations = outgoingMessages.MulticastTransportOperations;
 
-            try
+            var tasks = new List<Task>(unicastTransportOperations.Count + multicastTransportOperations.Count);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var operation in unicastTransportOperations)
             {
-                var unicastTransportOperations = outgoingMessages.UnicastTransportOperations;
-                var multicastTransportOperations = outgoingMessages.MulticastTransportOperations;
-
-                var tasks = new List<Task>(unicastTransportOperations.Count + multicastTransportOperations.Count);
-
-                foreach (var operation in unicastTransportOperations)
-                {
-                    tasks.Add(SendMessage(operation));
-                }
-
-                foreach (var operation in multicastTransportOperations)
-                {                    
-                    tasks.Add(PublishMessage(operation));
-                }
-
-                await Task.WhenAll(tasks).ConfigureAwait(false);
+                tasks.Add(SendMessage(operation));
             }
-            finally
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var operation in multicastTransportOperations)
             {
-                
+                tasks.Add(PublishMessage(operation));
             }
+
+            return Task.WhenAll(tasks);
         }
 
-        async Task SendMessage(UnicastTransportOperation transportOperation)
+        Task SendMessage(UnicastTransportOperation transportOperation)
         {
-            Logger.Debug("Send to "+ transportOperation.Destination);
+            Logger.Debug("Send to " + transportOperation.Destination);
 
             var toBeReceived = transportOperation.GetTimeToBeReceived();
-            var timeToBeReceived = toBeReceived.HasValue && toBeReceived.Value < TimeSpan.MaxValue ? toBeReceived : null;
+            var timeToBeReceived = toBeReceived.HasValue && toBeReceived.Value < TimeSpan.MaxValue
+                ? toBeReceived
+                : null;
 
             if (timeToBeReceived != null && timeToBeReceived.Value == TimeSpan.Zero)
             {
                 var messageType = transportOperation.Message.Headers[Headers.EnclosedMessageTypes].Split(',').First();
-                Logger.WarnFormat("TimeToBeReceived is set to zero for message of type '{0}'. Cannot send operation.", messageType);
-                return;
-            }           
+                Logger.WarnFormat("TimeToBeReceived is set to zero for message of type '{0}'. Cannot send operation.",
+                    messageType);
+                return Task.FromResult(0);
+            }
 
             // TimeToBeReceived was not specified on message - go for maximum set by SDK
             if (timeToBeReceived == TimeSpan.MaxValue)
@@ -75,44 +71,48 @@ namespace NServiceBus.Kafka.Sending
                 timeToBeReceived = null;
             }
 
-
             var messageWrapper = BuildMessageWrapper(transportOperation, toBeReceived, transportOperation.Destination);
 
             var topic = producerFactory.GetProducer().Topic(transportOperation.Destination);
 
             var messageStream = new MemoryStream();
-            KafkaTransportInfrastructure.GetSerializer().Serialize(messageWrapper, messageStream);            
-           
-            await topic.Produce(messageStream.ToArray()).ConfigureAwait(false);
-            
+            KafkaTransportInfrastructure.GetSerializer().Serialize(messageWrapper, messageStream);
+
+            return topic.Produce(messageStream.ToArray());
         }
 
-        async Task PublishMessage(MulticastTransportOperation transportOperation)
+        Task PublishMessage(MulticastTransportOperation transportOperation)
         {
-
-            var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue, transportOperation.MessageType.ToString());
+            var messageWrapper = BuildMessageWrapper(transportOperation, TimeSpan.MaxValue,
+                transportOperation.MessageType.ToString());
 
             var topicsToSendTo = SubscriptionManager.GetTypeHierarchy(transportOperation.MessageType);
 
             var messageStream = new MemoryStream();
             KafkaTransportInfrastructure.GetSerializer().Serialize(messageWrapper, messageStream);
 
+            var publishTasks = new List<Task>(topicsToSendTo.Count);
+
             foreach (var t in topicsToSendTo)
             {
                 Logger.Debug("Publish to " + t);
-                var topic = producerFactory.GetProducer().Topic(t);                              
+                var topic = producerFactory.GetProducer().Topic(t);
 
-                await topic.Produce(messageStream.ToArray()).ContinueWith(result => Logger.Info("new partition and offset: "+result.Result.Partition+" "+result.Result.Offset));
+                publishTasks.Add(topic.Produce(messageStream.ToArray())
+                    .ContinueWith(
+                        result => Logger.Info("new partition and offset: " + result.Result.Partition + " " +
+                                              result.Result.Offset), TaskContinuationOptions.ExecuteSynchronously));
             }
 
-           
+            return Task.WhenAll(publishTasks);
         }
 
-        MessageWrapper BuildMessageWrapper(IOutgoingTransportOperation operation, TimeSpan? timeToBeReceived, string destinationQueue)
+        static MessageWrapper BuildMessageWrapper(IOutgoingTransportOperation operation, TimeSpan? timeToBeReceived,
+            string destinationQueue)
         {
             var msg = operation.Message;
             var headers = new Dictionary<string, string>(msg.Headers);
-          
+
             var messageIntent = default(MessageIntentEnum);
             string messageIntentString;
             if (headers.TryGetValue(Headers.MessageIntent, out messageIntentString))
@@ -136,7 +136,8 @@ namespace NServiceBus.Kafka.Sending
 
     static class DictionaryExtensions
     {
-        public static TValue GetValueOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue defaultValue = default(TValue))
+        public static TValue GetValueOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key,
+            TValue defaultValue = default(TValue))
         {
             TValue value;
             return dictionary.TryGetValue(key, out value) ? value : defaultValue;

@@ -18,6 +18,7 @@ namespace NServiceBus.Transports.Kafka.Administration
         public const string NumberOfPartitions = "Transport.Kafka.NumberOfPartitions";
         public const string ReplicationFactor = "Transport.Kafka.ReplicationFactor";
         public const string CreateQueues = "Transport.Kafka.CreateQueues";
+        public const string SecondsBetweenCommits = "Transport.Kafka.SecondsBetweenCommits";
 
 
     }

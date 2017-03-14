@@ -113,13 +113,17 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         async Task TimerLoop()
         {
+            int SecondsBetweenCommits;
+            if (!settingsHolder.TryGet<int>(WellKnownConfigurationKeys.SecondsBetweenCommits, out SecondsBetweenCommits))
+                SecondsBetweenCommits = 1;
+
             var token = tokenSource.Token;
             while (!tokenSource.IsCancellationRequested)
             {
                 try
                 {
                     
-                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,0,1,0), token)).ConfigureAwait(false);                    
+                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,0, SecondsBetweenCommits, 0), token)).ConfigureAwait(false);                    
                     await CommitOffsets().ConfigureAwait(false);
                 }
                 catch (Exception)
@@ -222,28 +226,20 @@ namespace NServiceBus.Transports.Kafka.Connection
 
         private void Consumer_OnMessage(object sender, Message e)
         {
-            try
-            {
-                circuitBreaker.Success();
-                Logger.Debug($"message consumed");
-                var receiveTask = InnerReceive(e);
-                
-                runningReceiveTasks.TryAdd(receiveTask, receiveTask);
+            circuitBreaker.Success();
+            Logger.Debug($"message consumed");
+            var receiveTask = InnerReceive(e);
 
-                receiveTask.ContinueWith((t, state) =>
-                {
-                    var receiveTasks = (ConcurrentDictionary<Task, Task>)state;
-                                    
+            runningReceiveTasks.TryAdd(receiveTask, receiveTask);
 
-                    Task toBeRemoved;
-                    receiveTasks.TryRemove(t, out toBeRemoved);
-                }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously);
-            }
-            catch (OperationCanceledException)
+            receiveTask.ContinueWith((t, state) =>
             {
-                // For graceful shutdown purposes
-                return;
-            }
+                var receiveTasks = (ConcurrentDictionary<Task, Task>)state;
+
+
+                Task toBeRemoved;
+                receiveTasks.TryRemove(t, out toBeRemoved);
+            }, runningReceiveTasks, TaskContinuationOptions.ExecuteSynchronously);
         }
 
 
@@ -256,18 +252,14 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 await throttler.WaitAsync(tokenSource.Token);
 
-                var message = await retrieved.UnWrap().ConfigureAwait(false);
-
+                var message = retrieved.UnWrap();
 
                 OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, false, (a, b) => false);                  
 
                 await Process(message).ConfigureAwait(false);
 
                 OffsetsReceived.AddOrUpdate(retrieved.TopicPartitionOffset, true, (a, b) => true);                   
-                
-
             }
-
             catch (Exception ex)
             {
                 Logger.Error("Kafka transport failed pushing a message through pipeline", ex);
