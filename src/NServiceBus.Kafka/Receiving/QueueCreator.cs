@@ -105,9 +105,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
         {
             try
             {
-                /* bool createQueues;
-                 if (!settings.TryGet<bool>(WellKnownConfigurationKeys.CreateQueues, out createQueues))
-                     return;*/
+                bool createQueues;
+                if (!settings.TryGet<bool>(WellKnownConfigurationKeys.CreateQueues, out createQueues))
+                    return;
 
                 string pathToBin;
                 if (!settings.TryGet<string>(WellKnownConfigurationKeys.KafkaPathToBin, out pathToBin))
