@@ -70,6 +70,7 @@ namespace NServiceBus.Transport.Kafka
             settings.SetDefault("MainSerializer", Tuple.Create(definition, new SettingsHolder()));
         }
 
+
         internal static IMessageSerializer GetMainSerializer(IMessageMapper mapper, ReadOnlySettings settings)
         {
             var definitionAndSettings = settings.Get<Tuple<SerializationDefinition, SettingsHolder>>("MainSerializer");
