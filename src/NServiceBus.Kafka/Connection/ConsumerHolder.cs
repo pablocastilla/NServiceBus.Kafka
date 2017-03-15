@@ -115,7 +115,7 @@ namespace NServiceBus.Transports.Kafka.Connection
         {
             int SecondsBetweenCommits;
             if (!settingsHolder.TryGet<int>(WellKnownConfigurationKeys.SecondsBetweenCommits, out SecondsBetweenCommits))
-                SecondsBetweenCommits = 1;
+                SecondsBetweenCommits = 30;
 
             var token = tokenSource.Token;
             while (!tokenSource.IsCancellationRequested)
@@ -123,7 +123,7 @@ namespace NServiceBus.Transports.Kafka.Connection
                 try
                 {
                     
-                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,0, SecondsBetweenCommits, 0), token)).ConfigureAwait(false);                    
+                    await Task.WhenAny(Task.Delay(new TimeSpan(0,0,0, SecondsBetweenCommits, 0))).ConfigureAwait(false);                    
                     await CommitOffsets().ConfigureAwait(false);
                 }
                 catch (Exception)
@@ -295,23 +295,18 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                     TopicPartitionOffset maxOffset = new TopicPartitionOffset();
                     var offsetFound = false;
+                    
 
                     foreach (var o in orderedOffsets)
                     {
 
-                        if (OffsetsReceived.Keys.Contains(o) && OffsetsReceived[o] != true)
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            maxOffset = o;
+                            maxOffset.Offset = o.Offset;
+                            maxOffset.Partition = o.Partition;
+                            maxOffset.Topic = o.Topic;
                             offsetFound = true;                          
 
                             offSetsToRemove.Add(o);
-
-                           
-                        }
+                          
                     }
 
                     if (offsetFound)
@@ -330,7 +325,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 if (!OffsetsReceived.TryRemove(offsetToRemove, out aux))
                 {
-                    Logger.Warn("offset received cound not be removed from list");
+                    Logger.Warn("offset received could not be removed from list");
 
                     return;
                 }
