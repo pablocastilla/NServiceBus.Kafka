@@ -64,7 +64,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
                 mainConsumer = consumerHolder;
                 this.onError = onError;
                 this.onMessage = onMessage;
-                eventsConsumer = new ConsumerHolder(connectionString, inputQueue, settings, settingsHolder, onMessage, onError, criticalError,true);
+
+                //event consumer: doesn't subscribe to endpoint topics, just to events topics
+                eventsConsumer =  new ConsumerHolder(connectionString, inputQueue+".Events", settings, settingsHolder, onMessage, onError, criticalError,true);
                 consumerHolderList.Add(eventsConsumer);
             }
 

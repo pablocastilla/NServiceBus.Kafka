@@ -188,6 +188,8 @@ namespace NServiceBus.Transports.Kafka.Connection
             else
                 config["heartbeat.interval.ms"] = "5000";
 
+                        
+
             config.DefaultTopicConfig = defaultConfig;
 
             if(consumer!=null)
@@ -325,7 +327,7 @@ namespace NServiceBus.Transports.Kafka.Connection
 
                 if (!OffsetsReceived.TryRemove(offsetToRemove, out aux))
                 {
-                    Logger.Warn("offset received could not be removed from list");
+                    Logger.Info("offset received could not be removed from list");
 
                     return;
                 }

@@ -83,14 +83,28 @@ namespace NServiceBus.Transport.Kafka.Receiving
                 
                 foreach (var q in queueBindings.ReceivingAddresses)
                 {
-                    
-                    await process.StandardInput.WriteLineAsync(kafkaCreateTopicCommand + q).ConfigureAwait(false);
+                    try
+                    {
+                        await process.StandardInput.WriteLineAsync(kafkaCreateTopicCommand + q).ConfigureAwait(false);
+                    }
+                    catch(Exception ex)
+                    {
+                        Logger.Warn("Failed to create topic for " + q);
+
+                    }
                 }
 
                 foreach (var q in queueBindings.SendingAddresses)
                 {
-                    
-                    await process.StandardInput.WriteLineAsync(kafkaCreateTopicCommand + q).ConfigureAwait(false);
+                    try
+                    {
+                        await process.StandardInput.WriteLineAsync(kafkaCreateTopicCommand + q).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn("Failed to create topic for " + q);
+
+                    }
                 }
 
                 
@@ -110,6 +124,9 @@ namespace NServiceBus.Transport.Kafka.Receiving
             {
                 bool createQueues;
                 if (!settings.TryGet<bool>(WellKnownConfigurationKeys.CreateQueues, out createQueues))
+                    return;
+                
+                if (!createQueues)
                     return;
 
                 string pathToBin;
@@ -150,7 +167,7 @@ namespace NServiceBus.Transport.Kafka.Receiving
                 {
                     await process.StandardInput.WriteLineAsync(kafkaDeleteTopicCommand + q).ConfigureAwait(false);
 
-                }     */         
+                }     */
 
 
                 //create
@@ -158,11 +175,18 @@ namespace NServiceBus.Transport.Kafka.Receiving
 
                 foreach (var q in queues)
                 {
+                    try
+                    {
+                        await process.StandardInput.WriteLineAsync(kafkaCreateTopicCommand + q).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn("Failed to create topic for " + q);
 
-                    await process.StandardInput.WriteLineAsync(kafkaCreateTopicCommand + q).ConfigureAwait(false);
+                    }
+
+
                 }
-                
-                
             }
             catch (Exception ex)
             {
