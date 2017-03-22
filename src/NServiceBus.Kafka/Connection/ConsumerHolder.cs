@@ -92,8 +92,12 @@ namespace NServiceBus.Transports.Kafka.Connection
         }
 
         static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
+        
         public async Task Stop()
         {
+            consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
+            consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
+            consumer.OnEndReached -= Consumer_OnEndReached;
             consumer.OnError -= Consumer_OnError;
             consumer.OnMessage -= Consumer_OnMessage;
 
@@ -101,14 +105,13 @@ namespace NServiceBus.Transports.Kafka.Connection
             var allTasks = runningReceiveTasks.Values;
             var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
 
-           
-            
             if (finishedTask.Equals(timeoutTask))
             {
                 Logger.Error("The message pump failed to stop with in the time allowed(30s)");
             }
 
-           
+            await timer.ConfigureAwait(false);
+            await consumer.Stop().ConfigureAwait(false);
         }
 
         async Task TimerLoop()
@@ -444,11 +447,6 @@ namespace NServiceBus.Transports.Kafka.Connection
                     if (consumer != null)
                     {
                         Logger.Debug("Disposing " + consumer.Name);
-                                              
-                        consumer.Stop().Wait();
-                        consumer.OnPartitionsAssigned -= Consumer_OnPartitionsAssigned;
-                        consumer.OnPartitionsRevoked -= Consumer_OnPartitionsRevoked;
-                        consumer.OnEndReached -= Consumer_OnEndReached;
                         consumer.Dispose();
                     }
 
