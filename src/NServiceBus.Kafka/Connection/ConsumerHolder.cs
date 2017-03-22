@@ -91,21 +91,25 @@ namespace NServiceBus.Transports.Kafka.Connection
            
         }
 
-        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(30);
+        static TimeSpan StoppingAllTasksTimeout = TimeSpan.FromSeconds(60);
         public async Task Stop()
         {
             consumer.OnError -= Consumer_OnError;
             consumer.OnMessage -= Consumer_OnMessage;
 
             var timeoutTask = Task.Delay(StoppingAllTasksTimeout);
-            var allTasks = runningReceiveTasks.Values;
-            var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
+            
+            var tasksToWaitWhenStop = new List<Task>();
+            tasksToWaitWhenStop.AddRange(runningReceiveTasks.Values);
+            tasksToWaitWhenStop.Add(CommitOffsets());
+
+            var finishedTask = await Task.WhenAny(Task.WhenAll(tasksToWaitWhenStop), timeoutTask).ConfigureAwait(false);
 
            
             
             if (finishedTask.Equals(timeoutTask))
             {
-                Logger.Error("The message pump failed to stop with in the time allowed(30s)");
+                Logger.Error("The message pump failed to stop with in the time allowed(60s)");
             }
 
            
@@ -265,6 +269,7 @@ namespace NServiceBus.Transports.Kafka.Connection
             catch (Exception ex)
             {
                 Logger.Error("Kafka transport failed pushing a message through pipeline", ex);
+               
             }
             finally
             {
